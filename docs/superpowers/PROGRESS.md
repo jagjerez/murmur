@@ -20,7 +20,7 @@
 | 4    | Audio real (captura/reproducción, AudioStream PCM, enumeración de dispositivos)                          | ✅ COMPLETA (en `main`) |
 | 5    | OpenAI Realtime (RealtimeModelProvider sobre WebSocket, mockeado en tests)                               | ✅ COMPLETA (en `main`) |
 | 6    | SQLite (MemoryStore persistente, sesiones/mensajes/memoria, migraciones)                                 | ✅ COMPLETA (en `main`) |
-| 7    | RAG embeddings + retrieval (EmbeddingProvider, vectores en SQLite, RagRetriever)                         | ⬜ pendiente            |
+| 7    | RAG embeddings + retrieval (EmbeddingProvider, vectores en SQLite, RagRetriever)                         | ✅ COMPLETA (en `main`) |
 | 8    | RAG summaries + facts (SessionSummarizer, FactExtractor, alimenta contexto)                              | ⬜ pendiente            |
 | 9    | Orchestrator completo (hotkey→captura→modelo→contexto→respuesta→persistir)                               | ⬜ pendiente            |
 | 10   | Prompt (persona cálida, construcción de contexto RAG, presupuesto de tokens)                             | ⬜ pendiente            |
@@ -94,3 +94,12 @@
   reescribía `node:sqlite`→`sqlite` rompiendo el binario en runtime (invisible a Vitest, que corre el
   fuente) → `removeNodeProtocol:false` en `tsup.config.ts` de rag y cli, verificado con el binario.
   202 tests TS (rag 26, cli 32), cargo 11. IDs `randomUUID`, `now()` inyectable, tests con `:memory:`/temp.
+- Fase 7: RAG embeddings + retrieval (mergeada en `main`, commit `f049245`; Workflow `pass` al
+  primer intento + confirmación del orquestador). `@murmur/rag`: `vector.ts` (`cosineSimilarity`
+  idénticos→1/ortogonales→0/opuestos→−1/cero→0; `float32ToBytes`/`bytesToFloat32` LE), `embeddings.ts`
+  (`createOpenAIEmbeddingProvider` POST `/v1/embeddings` con `fetchFn` inyectable, `text-embedding-3-small`,
+  error→`ModelError`, key no logueada; `createMockEmbeddingProvider` determinista FNV-1a normalizado),
+  tabla `embeddings` (migración **v2** idempotente que preserva v1, FK `ON DELETE CASCADE`) con
+  `upsertEmbedding`/`getEmbedding`/`allEmbeddings`, y `createSqliteRagRetriever` (`index`/`retrieve`
+  top-k por coseno, `retrieveScored`, filtra por modelo). 253 tests TS (rag 74), cargo 11. Sin red,
+  SQL parametrizada. NITs no bloqueantes: input vacío en embed, skip silencioso si vector undefined.

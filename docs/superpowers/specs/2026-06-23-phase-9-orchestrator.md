@@ -64,7 +64,7 @@ export interface OrchestratorDeps {
 
 ## 4. Entregables
 
-- `@murmur/core`: `orchestrator.ts` reescrito (pipeline completo, deps inyectadas), 
+- `@murmur/core`: `orchestrator.ts` reescrito (pipeline completo, deps inyectadas),
   `providers/mock-realtime.ts` (`createMockRealtimeProvider`), exports en `index.ts`.
 - `@murmur/core` `package.json`: dep `@murmur/rag` (tipos de store/retriever/summarizer/fact).
 - Tests de integración con todos los providers mockeados.

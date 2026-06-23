@@ -20,12 +20,12 @@ de `@murmur/core` (F5), stores/retriever/summarizer/factExtractor de `@murmur/ra
 **Files:** `packages/core/src/providers/mock-realtime.ts` (+ `mock-realtime.test.ts`), export en `index.ts`.
 
 - [ ] Provider `RealtimeModelProvider` cuyo `connect(options)` guarda los callbacks (`onState`,
-  `onAudio`, `onUserTranscript`, `onAssistantTranscript`, `onError`, `onOpen`) y devuelve una sesión
-  que registra `sendAudio`/`commit`/`interrupt`/`close` en arrays inspeccionables. Expone helpers de
-  test: `emitState(s)`, `emitAudio(bytes)`, `emitUserTranscript(t)`, `emitAssistantTranscript(t)`,
-  `emitResponseDone()`, `emitError(e)`, y acceso a la última sesión/options.
+      `onAudio`, `onUserTranscript`, `onAssistantTranscript`, `onError`, `onOpen`) y devuelve una sesión
+      que registra `sendAudio`/`commit`/`interrupt`/`close` en arrays inspeccionables. Expone helpers de
+      test: `emitState(s)`, `emitAudio(bytes)`, `emitUserTranscript(t)`, `emitAssistantTranscript(t)`,
+      `emitResponseDone()`, `emitError(e)`, y acceso a la última sesión/options.
 - [ ] Tests (fallan→pasan): connect captura options; los emit llaman a los callbacks; sendAudio/commit
-  /interrupt/close quedan registrados.
+      /interrupt/close quedan registrados.
 - [ ] Commit: `feat(core): createMockRealtimeProvider para tests del orchestrator`.
 
 ## Task 2: `ConversationOrchestrator` (pipeline completo)
@@ -37,19 +37,19 @@ de `@murmur/core` (F5), stores/retriever/summarizer/factExtractor de `@murmur/ra
 - [ ] Implementar deps inyectadas (ver spec §3) y los métodos:
   - `startSession()`: `conversation.createSession()`; si hay `retriever`, `retrieve` un contexto y
     construir `instructions` básico; `realtime.connect({...connection, instructions, onState, onAudio,
-    onUserTranscript, onAssistantTranscript, onError, onOpen})`.
+onUserTranscript, onAssistantTranscript, onError, onOpen})`.
   - `startListening()`: `input.start()` → iterar `read()` → `session.sendAudio(chunk)`; estado de
     captura. `stopListening()`: `input.stop()` (si aplica) + `session.commit()`.
   - callbacks: `onState`→`setState`; `onAudio`→push a un `createPushPullStream` que alimenta
     `output.play(stream.read())` (arrancado una vez por respuesta); `onUserTranscript`→`addMessage(user)`
-    + `onTranscript`; `onAssistantTranscript`→acumular; al `responseDone`/`onState('idle')`→
-    `addMessage(assistant)` con lo acumulado y cerrar el stream de salida; `onError`→`setState('error')`.
+    - `onTranscript`; `onAssistantTranscript`→acumular; al `responseDone`/`onState('idle')`→
+      `addMessage(assistant)` con lo acumulado y cerrar el stream de salida; `onError`→`setState('error')`.
   - `interrupt()`: `session.interrupt()` + `output.stop()` + cerrar stream de salida.
   - `endSession()`: `conversation.endSession(id)`; si hay `summarizer`→`summarize(id)`; si hay
     `factExtractor`→`extract(transcriptCompleto)`; (con `sink`/`retriever.index` para indexar); `session.close()`.
 - [ ] Tests de integración (fallan→pasan), con `createMockRealtimeProvider`, `createMockVoiceInput`,
-  `createMemoryVoiceOutput`, `createSqliteStore(':memory:')` (conversation), mock retriever/summarizer/
-  factExtractor (o los reales con ChatProvider mock):
+      `createMemoryVoiceOutput`, `createSqliteStore(':memory:')` (conversation), mock retriever/summarizer/
+      factExtractor (o los reales con ChatProvider mock):
   - startSession crea sesión y conecta con `instructions` (incluye contexto si hay retriever).
   - startListening envía los chunks del input al `sendAudio` de la sesión.
   - secuencia de emits del mock realtime → estados `listening→thinking→speaking→idle` notificados;

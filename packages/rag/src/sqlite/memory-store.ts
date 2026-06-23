@@ -99,4 +99,15 @@ export class SqliteMemoryStore implements MemoryStore {
     };
     return Promise.resolve(row.n);
   }
+
+  /**
+   * Borra los items con `created_at < beforeMs` (retención). Devuelve el número de
+   * items eliminados. Los embeddings asociados caen en cascada (`ON DELETE CASCADE`).
+   */
+  pruneOlderThan(beforeMs: number): Promise<number> {
+    const info = this.#db
+      .prepare('DELETE FROM memory_items WHERE created_at < ?')
+      .run(beforeMs) as unknown as { changes: number | bigint };
+    return Promise.resolve(Number(info.changes));
+  }
 }

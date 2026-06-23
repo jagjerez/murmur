@@ -66,6 +66,44 @@ describe('createSqliteStore', () => {
     store.close();
   });
 
+  it('pruneOlderThan borra memoria, mensajes y sesiones anteriores al umbral', async () => {
+    let clock = 100;
+    const store = createSqliteStore(':memory:', () => clock);
+
+    await store.memory.add({ id: 'viejo', type: 'short_term', content: 'x', createdAt: 100 });
+    const oldSession = store.conversation.createSession();
+    store.conversation.addMessage({ sessionId: oldSession.id, role: 'user', text: 'antiguo' });
+
+    clock = 500;
+    await store.memory.add({ id: 'nuevo', type: 'short_term', content: 'y', createdAt: 500 });
+    const newSession = store.conversation.createSession();
+    store.conversation.addMessage({ sessionId: newSession.id, role: 'user', text: 'reciente' });
+
+    await store.pruneOlderThan(300);
+
+    const remaining = (await store.memory.all()).map((m) => m.id);
+    expect(remaining).toEqual(['nuevo']);
+    expect(store.conversation.getSession(oldSession.id)).toBeUndefined();
+    expect(store.conversation.getSession(newSession.id)).toBeDefined();
+    store.close();
+  });
+
+  it('exportAll devuelve memoria, sesiones y mensajes persistidos', async () => {
+    const store = createSqliteStore(':memory:');
+    await store.memory.add({ id: 'm1', type: 'long_term_fact', content: 'dato', createdAt: 7 });
+    const session = store.conversation.createSession();
+    store.conversation.addMessage({ sessionId: session.id, role: 'user', text: 'hola' });
+
+    const dump = await store.exportAll();
+    expect(dump.memory.map((m) => m.id)).toEqual(['m1']);
+    expect(dump.sessions.map((s) => s.id)).toEqual([session.id]);
+    expect(dump.messages.map((m) => m.text)).toEqual(['hola']);
+
+    // Serializable a JSON sin pérdida.
+    expect(() => JSON.stringify(dump)).not.toThrow();
+    store.close();
+  });
+
   it('persiste entre reaperturas del fichero', async () => {
     const path = tempFile();
 

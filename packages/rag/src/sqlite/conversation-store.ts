@@ -99,4 +99,30 @@ export class ConversationStore {
       .all(sessionId) as unknown as MessageRow[];
     return rows.map(rowToMessage);
   }
+
+  /**
+   * Retención: borra los mensajes con `created_at < beforeMs` y las sesiones con
+   * `started_at < beforeMs`. Los mensajes de una sesión borrada caen en cascada
+   * (`ON DELETE CASCADE`); además se podan mensajes antiguos de sesiones recientes.
+   */
+  pruneOlderThan(beforeMs: number): void {
+    this.#db.prepare('DELETE FROM messages WHERE created_at < ?').run(beforeMs);
+    this.#db.prepare('DELETE FROM sessions WHERE started_at < ?').run(beforeMs);
+  }
+
+  /** Vuelca todas las sesiones y mensajes persistidos (para export). */
+  exportConversation(): { sessions: Session[]; messages: Message[] } {
+    const sessionRows = this.#db
+      .prepare('SELECT id, started_at, ended_at FROM sessions ORDER BY started_at ASC, id ASC')
+      .all() as unknown as SessionRow[];
+    const messageRows = this.#db
+      .prepare(
+        'SELECT id, session_id, role, text, created_at FROM messages ORDER BY created_at ASC, rowid ASC',
+      )
+      .all() as unknown as MessageRow[];
+    return {
+      sessions: sessionRows.map(rowToSession),
+      messages: messageRows.map(rowToMessage),
+    };
+  }
 }

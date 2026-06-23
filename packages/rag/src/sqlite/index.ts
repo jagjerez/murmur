@@ -1,7 +1,16 @@
+import type { MemoryItem } from '../types';
+import type { Message, Session } from '@murmur/shared';
 import { openDatabase, migrate } from './db';
 import { SqliteMemoryStore } from './memory-store';
 import { ConversationStore } from './conversation-store';
 import { SqliteEmbeddingStore } from './embeddings-store';
+
+/** Volcado serializable de todos los datos persistidos (para export/backup). */
+export interface StoreExport {
+  memory: MemoryItem[];
+  sessions: Session[];
+  messages: Message[];
+}
 
 /** Store SQLite combinado: memoria + conversación + embeddings sobre un único handle. */
 export interface SqliteStore {
@@ -10,6 +19,13 @@ export interface SqliteStore {
   readonly embeddings: SqliteEmbeddingStore;
   /** Vacía todas las tablas (memory_items, sessions, messages, embeddings). */
   reset(): Promise<void>;
+  /**
+   * Retención: borra memoria, mensajes y sesiones anteriores a `beforeMs`
+   * (`created_at`/`started_at < beforeMs`). Los datos en cascada se limpian solos.
+   */
+  pruneOlderThan(beforeMs: number): Promise<void>;
+  /** Vuelca toda la memoria, sesiones y mensajes en un objeto serializable a JSON. */
+  exportAll(): Promise<StoreExport>;
   /** Cierra el handle de base de datos. */
   close(): void;
   /** Ruta del fichero o `':memory:'`. */
@@ -40,6 +56,14 @@ export function createSqliteStore(path: string, now: () => number = Date.now): S
         'DELETE FROM embeddings; DELETE FROM messages; DELETE FROM sessions; DELETE FROM memory_items;',
       );
       return Promise.resolve();
+    },
+    async pruneOlderThan(beforeMs: number): Promise<void> {
+      await memory.pruneOlderThan(beforeMs);
+      conversation.pruneOlderThan(beforeMs);
+    },
+    async exportAll(): Promise<StoreExport> {
+      const { sessions, messages } = conversation.exportConversation();
+      return { memory: await memory.all(), sessions, messages };
     },
     close(): void {
       db.close();

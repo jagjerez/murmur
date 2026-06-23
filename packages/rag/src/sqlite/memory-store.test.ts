@@ -95,4 +95,22 @@ describe('SqliteMemoryStore', () => {
       store.add(item({ id: 'a', type: 'no_existe' as MemoryItem['type'] })),
     ).rejects.toBeInstanceOf(MemoryError);
   });
+
+  it('pruneOlderThan borra solo los items anteriores al umbral', async () => {
+    await store.add(item({ id: 'viejo', createdAt: 100 }));
+    await store.add(item({ id: 'limite', createdAt: 200 }));
+    await store.add(item({ id: 'nuevo', createdAt: 300 }));
+
+    const removed = await store.pruneOlderThan(200);
+
+    expect(removed).toBe(1);
+    const ids = (await store.all()).map((x) => x.id).sort();
+    expect(ids).toEqual(['limite', 'nuevo']);
+  });
+
+  it('pruneOlderThan no borra nada si todo es posterior', async () => {
+    await store.add(item({ id: 'a', createdAt: 500 }));
+    expect(await store.pruneOlderThan(100)).toBe(0);
+    expect(await store.count()).toBe(1);
+  });
 });

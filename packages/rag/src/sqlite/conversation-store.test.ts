@@ -81,4 +81,48 @@ describe('ConversationStore', () => {
     expect(recent.map((s) => s.id)).toEqual([b.id, c.id]);
     expect(a.id).toBeTruthy();
   });
+
+  it('pruneOlderThan borra mensajes y sesiones anteriores al umbral', () => {
+    clock = 100;
+    const vieja = store.createSession();
+    store.addMessage({ sessionId: vieja.id, role: 'user', text: 'antiguo' });
+    clock = 500;
+    const nueva = store.createSession();
+    store.addMessage({ sessionId: nueva.id, role: 'user', text: 'reciente' });
+
+    store.pruneOlderThan(300);
+
+    expect(store.getSession(vieja.id)).toBeUndefined();
+    expect(store.getMessages(vieja.id)).toEqual([]);
+    expect(store.getSession(nueva.id)).toBeDefined();
+    expect(store.getMessages(nueva.id).map((m) => m.text)).toEqual(['reciente']);
+  });
+
+  it('pruneOlderThan borra mensajes antiguos aunque la sesión sea reciente', () => {
+    clock = 500;
+    const session = store.createSession();
+    clock = 100;
+    store.addMessage({ sessionId: session.id, role: 'user', text: 'antiguo' });
+    clock = 600;
+    store.addMessage({ sessionId: session.id, role: 'assistant', text: 'reciente' });
+
+    store.pruneOlderThan(300);
+
+    // La sesión sigue (started_at 500 >= 300) pero el mensaje viejo desaparece.
+    expect(store.getSession(session.id)).toBeDefined();
+    expect(store.getMessages(session.id).map((m) => m.text)).toEqual(['reciente']);
+  });
+
+  it('exportConversation devuelve todas las sesiones y mensajes', () => {
+    clock = 100;
+    const s1 = store.createSession();
+    store.addMessage({ sessionId: s1.id, role: 'user', text: 'hola' });
+    clock = 200;
+    const s2 = store.createSession();
+    store.addMessage({ sessionId: s2.id, role: 'assistant', text: 'qué tal' });
+
+    const { sessions, messages } = store.exportConversation();
+    expect(sessions.map((s) => s.id).sort()).toEqual([s1.id, s2.id].sort());
+    expect(messages.map((m) => m.text).sort()).toEqual(['hola', 'qué tal']);
+  });
 });

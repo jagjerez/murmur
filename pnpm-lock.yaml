@@ -15,6 +15,9 @@ catalogs:
     '@tauri-apps/cli':
       specifier: ^2.2.2
       version: 2.11.3
+    '@tauri-apps/plugin-global-shortcut':
+      specifier: ^2.2.0
+      version: 2.3.2
     '@testing-library/dom':
       specifier: ^10.4.0
       version: 10.4.1
@@ -89,12 +92,18 @@ importers:
 
   apps/desktop:
     dependencies:
+      '@murmur/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@murmur/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
       '@murmur/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@tauri-apps/plugin-global-shortcut':
+        specifier: 'catalog:'
+        version: 2.3.2
       react:
         specifier: 'catalog:'
         version: 19.2.7
@@ -806,6 +815,9 @@ packages:
     resolution: {integrity: sha512-EElQe8z8uD7Pi5++tJ/UfEwWuK08rd3oCDYdeIbJAb6pZRrxlqmoF5gh5H5YvzmUPhS4IRCaLSsQhvWkrfK+GQ==}
     engines: {node: '>= 10'}
     hasBin: true
+
+  '@tauri-apps/plugin-global-shortcut@2.3.2':
+    resolution: {integrity: sha512-UReHNXrLvpEjylE4jb4oCYiy96uRykPUthoCQCmRXYrd5hs5X9DrW+qOn7GLW57EJN4tdK8bgK5twBTz2NOxzA==}
 
   '@testing-library/dom@10.4.1':
     resolution: {integrity: sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==}
@@ -2387,6 +2399,10 @@ snapshots:
       '@tauri-apps/cli-win32-arm64-msvc': 2.11.3
       '@tauri-apps/cli-win32-ia32-msvc': 2.11.3
       '@tauri-apps/cli-win32-x64-msvc': 2.11.3
+
+  '@tauri-apps/plugin-global-shortcut@2.3.2':
+    dependencies:
+      '@tauri-apps/api': 2.11.1
 
   '@testing-library/dom@10.4.1':
     dependencies:

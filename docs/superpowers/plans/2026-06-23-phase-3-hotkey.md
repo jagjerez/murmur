@@ -27,12 +27,12 @@ nativo se prueba con `cargo test` y mocks; la build nativa de Tauri NO se ejecut
 **Files:** `packages/native/src/accelerator.rs`, `packages/native/src/lib.rs` (añadir `mod accelerator;`).
 
 - [ ] En `accelerator.rs`: `enum Modifier`, `struct Accelerator { mods: Vec<Modifier>, key: String }`,
-  `fn parse(s: &str) -> Result<Accelerator, AcceleratorError>`, `impl Display` (forma canónica
-  `Mod+Mod+Key`), normalización (`CmdOrCtrl`/`CommandOrControl` equivalentes; `Ctrl`→`Control`;
-  `Option`→`Alt`; `Meta`/`Super` equivalentes). Validación: cadena vacía, sin tecla final,
-  modificador desconocido, modificadores duplicados → error.
+      `fn parse(s: &str) -> Result<Accelerator, AcceleratorError>`, `impl Display` (forma canónica
+      `Mod+Mod+Key`), normalización (`CmdOrCtrl`/`CommandOrControl` equivalentes; `Ctrl`→`Control`;
+      `Option`→`Alt`; `Meta`/`Super` equivalentes). Validación: cadena vacía, sin tecla final,
+      modificador desconocido, modificadores duplicados → error.
 - [ ] `#[cfg(test)] mod tests`: parsear `"CommandOrControl+Shift+Space"` OK; rechazar `""`,
-  `"Shift+"`, `"Foo+A"`, `"Ctrl+Ctrl+A"`; round-trip `parse(to_string) == parse`.
+      `"Shift+"`, `"Foo+A"`, `"Ctrl+Ctrl+A"`; round-trip `parse(to_string) == parse`.
 - [ ] `cd packages/native && cargo test` verde. Commit: `feat(native): parser de aceleradores con cargo test`.
 
 ## Task 3: `HotkeyManager` + `parseAccelerator` en `@murmur/core`
@@ -40,23 +40,30 @@ nativo se prueba con `cargo test` y mocks; la build nativa de Tauri NO se ejecut
 **Files:** `packages/core/src/hotkey.ts`, `packages/core/src/hotkey.test.ts`, `packages/core/src/index.ts` (export).
 
 Contrato:
+
 ```ts
 export type Modifier = 'CommandOrControl' | 'Control' | 'Alt' | 'Shift' | 'Super';
-export interface ParsedAccelerator { modifiers: Modifier[]; key: string; }
+export interface ParsedAccelerator {
+  modifiers: Modifier[];
+  key: string;
+}
 export function parseAccelerator(s: string): ParsedAccelerator; // lanza HotkeyError
 export interface HotkeyManager {
   register(accelerator: string, handler: () => void): Promise<void>;
   unregister(accelerator: string): Promise<void>;
   unregisterAll(): Promise<void>;
 }
-export interface MemoryHotkeyManager extends HotkeyManager { trigger(accelerator: string): void; registered(): string[]; }
+export interface MemoryHotkeyManager extends HotkeyManager {
+  trigger(accelerator: string): void;
+  registered(): string[];
+}
 export function createMemoryHotkeyManager(): MemoryHotkeyManager;
 ```
 
 - [ ] Tests (fallan): `parseAccelerator` válidos (normaliza a canónico, p. ej. `cmdorctrl+shift+space`
-  → modifiers `['CommandOrControl','Shift']`, key `'Space'`) e inválidos (vacío/sin tecla/mod
-  desconocido → `HotkeyError`). `createMemoryHotkeyManager`: register + trigger llama al handler;
-  unregister deja de llamarlo; unregisterAll limpia; registrar acelerador inválido lanza.
+      → modifiers `['CommandOrControl','Shift']`, key `'Space'`) e inválidos (vacío/sin tecla/mod
+      desconocido → `HotkeyError`). `createMemoryHotkeyManager`: register + trigger llama al handler;
+      unregister deja de llamarlo; unregisterAll limpia; registrar acelerador inválido lanza.
 - [ ] Implementar `hotkey.ts`. Export en `index.ts`.
 - [ ] `pnpm --filter @murmur/core test` verde. Commit: `feat(core): HotkeyManager y parseAccelerator`.
 
@@ -67,13 +74,13 @@ export function createMemoryHotkeyManager(): MemoryHotkeyManager;
 `pnpm-workspace.yaml` (catalog `@tauri-apps/plugin-global-shortcut: ^2.2.0`).
 
 - [ ] `TauriHotkeyManager implements HotkeyManager`: importa `@tauri-apps/plugin-global-shortcut`
-  de forma perezosa (`await import`) y solo actúa si `isTauri()` (detecta `window.__TAURI_INTERNALS__`);
-  fuera de Tauri degrada a no-op (loggea una vez). No debe romper jsdom/vite.
+      de forma perezosa (`await import`) y solo actúa si `isTauri()` (detecta `window.__TAURI_INTERNALS__`);
+      fuera de Tauri degrada a no-op (loggea una vez). No debe romper jsdom/vite.
 - [ ] `App.tsx`: aceptar prop opcional `hotkeys?: HotkeyManager` (default: `TauriHotkeyManager`).
-  En un `useEffect`, registrar el hotkey por defecto (`CommandOrControl+Shift+Space`) cuyo handler
-  dispara la captura de la cápsula (equivalente a press en toggle). Limpieza con `unregisterAll`.
+      En un `useEffect`, registrar el hotkey por defecto (`CommandOrControl+Shift+Space`) cuyo handler
+      dispara la captura de la cápsula (equivalente a press en toggle). Limpieza con `unregisterAll`.
 - [ ] Test RTL: render `<App hotkeys={createMemoryHotkeyManager()} />`; `act(() => hk.trigger('CommandOrControl+Shift+Space'))`
-  alterna `aria-pressed`/estado de la cápsula a capturando.
+      alterna `aria-pressed`/estado de la cápsula a capturando.
 - [ ] `src-tauri`: añadir `tauri-plugin-global-shortcut` a `Cargo.toml`, `.plugin(tauri_plugin_global_shortcut::Builder::new().build())` en `lib.rs`, y la capacidad/permiso (`capabilities/*.json` o `tauri.conf.json`). Documentar que la build nativa queda fuera del pipeline.
 - [ ] `pnpm --filter @murmur/desktop typecheck && build && test` verde. Commit: `feat(desktop): TauriHotkeyManager y cableado del hotkey a la cápsula`.
 

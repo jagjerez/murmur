@@ -22,6 +22,7 @@ catalog:
   '@vitejs/plugin-react': ^4.3.4
   '@tauri-apps/cli': ^2.2.2
   '@tauri-apps/api': ^2.2.0
+  '@tauri-apps/plugin-global-shortcut': ^2.2.0
   jsdom: ^25.0.1
   '@testing-library/react': ^16.1.0
   '@testing-library/dom': ^10.4.0

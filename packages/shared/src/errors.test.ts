@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { MurmurError, ConfigError, AudioError, ModelError, MemoryError, HotkeyError } from './errors';
+import {
+  MurmurError,
+  ConfigError,
+  AudioError,
+  ModelError,
+  MemoryError,
+  HotkeyError,
+} from './errors';
 
 describe('errores', () => {
   it('MurmurError lleva código y es Error', () => {

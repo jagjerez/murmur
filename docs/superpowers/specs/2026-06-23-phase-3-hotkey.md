@@ -20,16 +20,16 @@ implementa y documenta pero no se ejecuta en el pipeline.
 
 ## 2. Decisiones confirmadas
 
-| Tema | Decisión |
-| ---- | -------- |
+| Tema                  | Decisión                                                                                                                                                                                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Formato de acelerador | Estilo Tauri/Electron: `"CommandOrControl+Shift+Space"`. Modificadores: `CommandOrControl`/`CmdOrCtrl`, `Control`/`Ctrl`, `Alt`/`Option`, `Shift`, `Super`/`Meta`. Tecla final obligatoria. Case-insensitive en modificadores; se normaliza a forma canónica. |
-| Parser nativo | `packages/native`: módulo `accelerator` en Rust que parsea/valida/normaliza a `Accelerator { mods, key }`, con `to_string` canónico. `cargo test` cubre válidos, inválidos (vacío, sin tecla, modificador desconocido, duplicados), y round-trip. |
-| Parser TS | `@murmur/core`: `parseAccelerator(s)` con las mismas reglas → `{ modifiers: Modifier[]; key: string }` o lanza `HotkeyError`. |
-| Error | Nuevo `HotkeyError` (code `HOTKEY_ERROR`) en `@murmur/shared`, subclase de `MurmurError`. |
-| Abstracción | `HotkeyManager { register(accel, handler), unregister(accel), unregisterAll() }` (async). `createMemoryHotkeyManager()` para tests: guarda handlers y expone `trigger(accel)` para simular la pulsación. |
-| Implementación real | `apps/desktop`: `TauriHotkeyManager` usa `@tauri-apps/plugin-global-shortcut`. Guarda con detección de entorno: si no hay runtime Tauri (dev/navegador/jsdom), degrada a no-op seguro (loggea) sin romper. |
-| Cableado | La app registra el hotkey por defecto (`CommandOrControl+Shift+Space`) y, al dispararse, ejecuta el gesto de captura de la cápsula (press en toggle). El manager se INYECTA en la app (memoria en tests, Tauri en producción). |
-| Integración Tauri | Añadir el plugin Rust `tauri-plugin-global-shortcut` a `src-tauri/Cargo.toml`, registrarlo en `lib.rs`, y añadir el permiso/capacidad correspondiente. No se compila en el pipeline (build nativa fuera). |
+| Parser nativo         | `packages/native`: módulo `accelerator` en Rust que parsea/valida/normaliza a `Accelerator { mods, key }`, con `to_string` canónico. `cargo test` cubre válidos, inválidos (vacío, sin tecla, modificador desconocido, duplicados), y round-trip.             |
+| Parser TS             | `@murmur/core`: `parseAccelerator(s)` con las mismas reglas → `{ modifiers: Modifier[]; key: string }` o lanza `HotkeyError`.                                                                                                                                 |
+| Error                 | Nuevo `HotkeyError` (code `HOTKEY_ERROR`) en `@murmur/shared`, subclase de `MurmurError`.                                                                                                                                                                     |
+| Abstracción           | `HotkeyManager { register(accel, handler), unregister(accel), unregisterAll() }` (async). `createMemoryHotkeyManager()` para tests: guarda handlers y expone `trigger(accel)` para simular la pulsación.                                                      |
+| Implementación real   | `apps/desktop`: `TauriHotkeyManager` usa `@tauri-apps/plugin-global-shortcut`. Guarda con detección de entorno: si no hay runtime Tauri (dev/navegador/jsdom), degrada a no-op seguro (loggea) sin romper.                                                    |
+| Cableado              | La app registra el hotkey por defecto (`CommandOrControl+Shift+Space`) y, al dispararse, ejecuta el gesto de captura de la cápsula (press en toggle). El manager se INYECTA en la app (memoria en tests, Tauri en producción).                                |
+| Integración Tauri     | Añadir el plugin Rust `tauri-plugin-global-shortcut` a `src-tauri/Cargo.toml`, registrarlo en `lib.rs`, y añadir el permiso/capacidad correspondiente. No se compila en el pipeline (build nativa fuera).                                                     |
 
 ## 3. Entregables
 

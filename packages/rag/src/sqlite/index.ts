@@ -1,12 +1,14 @@
 import { openDatabase, migrate } from './db';
 import { SqliteMemoryStore } from './memory-store';
 import { ConversationStore } from './conversation-store';
+import { SqliteEmbeddingStore } from './embeddings-store';
 
-/** Store SQLite combinado: memoria + conversación sobre un único handle. */
+/** Store SQLite combinado: memoria + conversación + embeddings sobre un único handle. */
 export interface SqliteStore {
   readonly memory: SqliteMemoryStore;
   readonly conversation: ConversationStore;
-  /** Vacía las tres tablas (memory_items, sessions, messages). */
+  readonly embeddings: SqliteEmbeddingStore;
+  /** Vacía todas las tablas (memory_items, sessions, messages, embeddings). */
   reset(): Promise<void>;
   /** Cierra el handle de base de datos. */
   close(): void;
@@ -25,12 +27,18 @@ export function createSqliteStore(path: string, now: () => number = Date.now): S
 
   const memory = new SqliteMemoryStore(db, now);
   const conversation = new ConversationStore(db, now);
+  const embeddings = new SqliteEmbeddingStore(db);
 
   return {
     memory,
     conversation,
+    embeddings,
     reset(): Promise<void> {
-      db.exec('DELETE FROM messages; DELETE FROM sessions; DELETE FROM memory_items;');
+      // `embeddings` cae en cascada al borrar `memory_items`, pero lo vaciamos explícitamente
+      // primero por claridad y para no depender del orden ni del pragma de FK.
+      db.exec(
+        'DELETE FROM embeddings; DELETE FROM messages; DELETE FROM sessions; DELETE FROM memory_items;',
+      );
       return Promise.resolve();
     },
     close(): void {
@@ -43,3 +51,4 @@ export function createSqliteStore(path: string, now: () => number = Date.now): S
 export { openDatabase, migrate, SCHEMA_VERSION, type Database } from './db';
 export { SqliteMemoryStore } from './memory-store';
 export { ConversationStore, type NewMessage } from './conversation-store';
+export { SqliteEmbeddingStore, type StoredEmbedding } from './embeddings-store';

@@ -19,13 +19,25 @@ describe('createSqliteStore', () => {
     return join(dir, name);
   }
 
-  it('expone memory, conversation, reset, close y path', () => {
+  it('expone memory, conversation, embeddings, reset, close y path', () => {
     const store = createSqliteStore(':memory:');
     expect(store.memory).toBeDefined();
     expect(store.conversation).toBeDefined();
+    expect(store.embeddings).toBeDefined();
     expect(typeof store.reset).toBe('function');
     expect(typeof store.close).toBe('function');
     expect(store.path).toBe(':memory:');
+    store.close();
+  });
+
+  it('embeddings funciona a través del store y reset lo vacía', async () => {
+    const store = createSqliteStore(':memory:');
+    await store.memory.add({ id: 'm1', type: 'short_term', content: 'algo', createdAt: 1 });
+    store.embeddings.upsertEmbedding('m1', new Float32Array([0.5, 0.5]), 'mock');
+    expect(store.embeddings.getEmbedding('m1')).toBeDefined();
+
+    await store.reset();
+    expect(store.embeddings.allEmbeddings()).toEqual([]);
     store.close();
   });
 

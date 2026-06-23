@@ -9,7 +9,7 @@ import { DatabaseSync } from 'node:sqlite';
 export type Database = DatabaseSync;
 
 /** Versión del esquema; se persiste en `PRAGMA user_version`. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /**
  * Abre (o crea) una base de datos en `path`. Acepta una ruta de fichero o `':memory:'`.
@@ -52,6 +52,19 @@ export function migrate(db: Database): void {
     CREATE INDEX IF NOT EXISTS idx_memory_items_type ON memory_items(type);
     CREATE INDEX IF NOT EXISTS idx_memory_items_session_id ON memory_items(session_id);
     CREATE INDEX IF NOT EXISTS idx_messages_session_id ON messages(session_id);
+  `);
+
+  // v2: memoria semántica. `CREATE TABLE IF NOT EXISTS` es idempotente y, al añadir solo
+  // una tabla nueva, una base v1 con datos conserva todo y se actualiza in situ a v2.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS embeddings (
+      memory_item_id TEXT PRIMARY KEY REFERENCES memory_items(id) ON DELETE CASCADE,
+      model          TEXT NOT NULL,
+      dim            INTEGER NOT NULL,
+      vector         BLOB NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_embeddings_model ON embeddings(model);
   `);
 
   db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);

@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, statSync, writeFileSync, mkdirSync, existsSync } f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ConfigError } from '@murmur/shared';
-import { ConfigStore, DEFAULT_CONFIG } from './config';
+import { ConfigStore, DEFAULT_CONFIG, DEFAULT_PRIVACY } from './config';
 
 describe('ConfigStore', () => {
   let baseDir: string;
@@ -93,5 +93,60 @@ describe('ConfigStore', () => {
     const config = store.load();
     expect(config.hotkey).toBe('Ctrl+X');
     expect((config as unknown as Record<string, unknown>).campoRaro).toBeUndefined();
+  });
+
+  describe('privacy', () => {
+    it('load() devuelve los defaults de privacidad', () => {
+      const store = new ConfigStore(baseDir);
+      const { privacy } = store.load();
+      expect(privacy).toEqual(DEFAULT_PRIVACY);
+      expect(privacy.localOnlyMode).toBe(false);
+      expect(privacy.storeTranscripts).toBe(true);
+      expect(privacy.redactBeforeStore).toBe(false);
+      expect(privacy.retentionDays).toBe(0);
+    });
+
+    it('setPrivacy persiste campos individuales y conserva el resto', () => {
+      const store = new ConfigStore(baseDir);
+      store.setPrivacy({ localOnlyMode: true, retentionDays: 30 });
+      const { privacy } = new ConfigStore(baseDir).load();
+      expect(privacy.localOnlyMode).toBe(true);
+      expect(privacy.retentionDays).toBe(30);
+      // los no tocados mantienen default
+      expect(privacy.storeTranscripts).toBe(true);
+      expect(privacy.redactBeforeStore).toBe(false);
+    });
+
+    it('normaliza privacidad parcial del JSON con defaults', () => {
+      mkdirSync(baseDir, { recursive: true });
+      writeFileSync(
+        join(baseDir, 'config.json'),
+        JSON.stringify({ privacy: { redactBeforeStore: true } }),
+        'utf8',
+      );
+      const { privacy } = new ConfigStore(baseDir).load();
+      expect(privacy.redactBeforeStore).toBe(true);
+      expect(privacy.localOnlyMode).toBe(false);
+      expect(privacy.storeTranscripts).toBe(true);
+      expect(privacy.retentionDays).toBe(0);
+    });
+
+    it('descarta tipos inválidos de privacidad y usa defaults', () => {
+      mkdirSync(baseDir, { recursive: true });
+      writeFileSync(
+        join(baseDir, 'config.json'),
+        JSON.stringify({ privacy: { localOnlyMode: 'sí', retentionDays: 'mucho' } }),
+        'utf8',
+      );
+      const { privacy } = new ConfigStore(baseDir).load();
+      expect(privacy.localOnlyMode).toBe(false);
+      expect(privacy.retentionDays).toBe(0);
+    });
+
+    it('retentionDays negativo se normaliza a 0', () => {
+      const store = new ConfigStore(baseDir);
+      store.setPrivacy({ retentionDays: -5 });
+      expect(new ConfigStore(baseDir).load().privacy.retentionDays).toBe(0);
+    });
   });
 });

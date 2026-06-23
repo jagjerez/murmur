@@ -1,7 +1,8 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { ConfigError } from '@murmur/shared';
 import { createSqliteStore, type SqliteStore } from '@murmur/rag';
-import type { ConfigStore, MurmurConfig } from './config';
+import type { ConfigStore, MurmurConfig, PrivacyConfig } from './config';
 
 export const VERSION = '0.1.0';
 
@@ -51,6 +52,14 @@ Comandos:
   config                         Muestra la configuración actual (API key redactada)
   config set-openai-key <key>    Guarda la API key de OpenAI
   config set-hotkey <combo>      Guarda el atajo de teclado global
+  config set-privacy <campo> <valor>
+                                 Cambia un flag de privacidad (localOnlyMode,
+                                 storeTranscripts, redactBeforeStore, retentionDays)
+  memory list                    Lista la memoria guardada
+  memory add <texto>             Añade una memoria explícita
+  memory forget <id>             Olvida (borra) un item de memoria
+  memory export [ruta]           Exporta memoria+sesiones+mensajes (JSON)
+  memory prune                   Aplica la retención (retentionDays)
   memory reset [--yes]           Borra la memoria local
   status                         Muestra el estado de murmur
   help                           Muestra esta ayuda
@@ -186,10 +195,62 @@ function cmdConfig(out: Output, deps: CliDeps, sub: string | undefined, rest: st
       return ok(out);
     }
 
+    case 'set-privacy':
+      return cmdSetPrivacy(out, deps, rest);
+
     default:
       out.line(`murmur: subcomando de config desconocido "${sub}". Usa "murmur help".`);
       return fail(out);
   }
+}
+
+/** Campos booleanos de privacidad editables por CLI. */
+const PRIVACY_BOOL_FIELDS = ['localOnlyMode', 'storeTranscripts', 'redactBeforeStore'] as const;
+type PrivacyBoolField = (typeof PRIVACY_BOOL_FIELDS)[number];
+
+function isPrivacyBoolField(field: string): field is PrivacyBoolField {
+  return (PRIVACY_BOOL_FIELDS as readonly string[]).includes(field);
+}
+
+function cmdSetPrivacy(out: Output, deps: CliDeps, rest: string[]): CliResult {
+  const [field, value] = rest;
+  if (!field || value === undefined) {
+    out.line('murmur: uso: murmur config set-privacy <campo> <valor>');
+    return fail(out);
+  }
+
+  if (isPrivacyBoolField(field)) {
+    const parsed = parseBool(value);
+    if (parsed === undefined) {
+      out.line(`murmur: valor inválido "${value}" para ${field} (usa true/false).`);
+      return fail(out);
+    }
+    const saved = deps.config.setPrivacy({ [field]: parsed } satisfies Partial<PrivacyConfig>);
+    out.line(`murmur: privacidad actualizada (${field}=${String(saved.privacy[field])}).`);
+    return ok(out);
+  }
+
+  if (field === 'retentionDays') {
+    const days = Number(value);
+    if (!Number.isFinite(days) || days < 0) {
+      out.line(`murmur: valor inválido "${value}" para retentionDays (usa un entero ≥ 0).`);
+      return fail(out);
+    }
+    const saved = deps.config.setPrivacy({ retentionDays: days });
+    out.line(`murmur: privacidad actualizada (retentionDays=${saved.privacy.retentionDays}).`);
+    return ok(out);
+  }
+
+  out.line(`murmur: campo de privacidad desconocido "${field}".`);
+  return fail(out);
+}
+
+/** Interpreta `true`/`false` (insensible a mayúsculas); `undefined` si no es válido. */
+function parseBool(value: string): boolean | undefined {
+  const v = value.toLowerCase();
+  if (v === 'true') return true;
+  if (v === 'false') return false;
+  return undefined;
 }
 
 function showConfig(out: Output, config: MurmurConfig): CliResult {
@@ -198,6 +259,13 @@ function showConfig(out: Output, config: MurmurConfig): CliResult {
   out.line(`Modelo:   ${config.model}`);
   out.line(`Voz:      ${config.voice}`);
   out.line(`Tema:     ${config.theme}`);
+  out.line('Privacidad:');
+  out.line(`  Modo local:        ${config.privacy.localOnlyMode ? 'sí' : 'no'}`);
+  out.line(`  Guardar transcripciones: ${config.privacy.storeTranscripts ? 'sí' : 'no'}`);
+  out.line(`  Redactar al guardar:     ${config.privacy.redactBeforeStore ? 'sí' : 'no'}`);
+  out.line(
+    `  Retención (días):  ${config.privacy.retentionDays === 0 ? 'sin límite' : config.privacy.retentionDays}`,
+  );
   return ok(out);
 }
 
@@ -207,11 +275,26 @@ async function cmdMemory(
   sub: string | undefined,
   rest: string[],
 ): Promise<CliResult> {
-  if (sub !== 'reset') {
-    out.line(`murmur: subcomando de memory desconocido "${sub ?? ''}". Usa "murmur help".`);
-    return fail(out);
+  switch (sub) {
+    case 'reset':
+      return await cmdMemoryReset(out, deps, rest);
+    case 'list':
+      return await cmdMemoryList(out, deps);
+    case 'add':
+      return await cmdMemoryAdd(out, deps, rest);
+    case 'forget':
+      return await cmdMemoryForget(out, deps, rest);
+    case 'export':
+      return await cmdMemoryExport(out, deps, rest);
+    case 'prune':
+      return await cmdMemoryPrune(out, deps);
+    default:
+      out.line(`murmur: subcomando de memory desconocido "${sub ?? ''}". Usa "murmur help".`);
+      return fail(out);
   }
+}
 
+async function cmdMemoryReset(out: Output, deps: CliDeps, rest: string[]): Promise<CliResult> {
   const confirmed = rest.includes('--yes');
   const dbPath = deps.config.dataPath('memory.db');
 
@@ -235,5 +318,123 @@ async function cmdMemory(
   }
 
   out.line('murmur: memoria local borrada.');
+  return ok(out);
+}
+
+/** Abre (creando el directorio si falta) el store de memoria para operaciones de escritura. */
+function openMemoryStore(deps: CliDeps): SqliteStore {
+  mkdirSync(deps.config.baseDir(), { recursive: true });
+  return openStore(deps, deps.config.dataPath('memory.db'));
+}
+
+async function cmdMemoryList(out: Output, deps: CliDeps): Promise<CliResult> {
+  const dbPath = deps.config.dataPath('memory.db');
+  if (!existsSync(dbPath) && deps.storeFactory === undefined) {
+    out.line('murmur: no hay memoria guardada.');
+    return ok(out);
+  }
+  const store = openMemoryStore(deps);
+  try {
+    const items = await store.memory.all();
+    if (items.length === 0) {
+      out.line('murmur: no hay memoria guardada.');
+      return ok(out);
+    }
+    for (const item of items) {
+      out.line(`${item.id}  [${item.type}]  ${item.content}`);
+    }
+    return ok(out);
+  } finally {
+    store.close();
+  }
+}
+
+async function cmdMemoryAdd(out: Output, deps: CliDeps, rest: string[]): Promise<CliResult> {
+  const text = rest.join(' ').trim();
+  if (!text) {
+    out.line('murmur: el texto de la memoria no puede estar vacío.');
+    return fail(out);
+  }
+  const now = deps.now ?? Date.now;
+  const store = openMemoryStore(deps);
+  try {
+    const id = randomUUID();
+    await store.memory.add({
+      id,
+      type: 'explicit_user_memory',
+      content: text,
+      createdAt: now(),
+    });
+    out.line(`murmur: memoria guardada (${id}).`);
+    return ok(out);
+  } finally {
+    store.close();
+  }
+}
+
+async function cmdMemoryForget(out: Output, deps: CliDeps, rest: string[]): Promise<CliResult> {
+  const id = rest[0];
+  if (!id) {
+    out.line('murmur: indica el id a olvidar: murmur memory forget <id>.');
+    return fail(out);
+  }
+  const dbPath = deps.config.dataPath('memory.db');
+  if (!existsSync(dbPath) && deps.storeFactory === undefined) {
+    out.line(`murmur: no se encontró ninguna memoria con id "${id}".`);
+    return fail(out);
+  }
+  const store = openMemoryStore(deps);
+  try {
+    const existing = await store.memory.get(id);
+    if (existing === undefined) {
+      out.line(`murmur: no se encontró ninguna memoria con id "${id}".`);
+      return fail(out);
+    }
+    await store.memory.delete(id);
+    out.line(`murmur: memoria olvidada (${id}).`);
+    return ok(out);
+  } finally {
+    store.close();
+  }
+}
+
+async function cmdMemoryExport(out: Output, deps: CliDeps, rest: string[]): Promise<CliResult> {
+  const target = rest[0];
+  const store = openMemoryStore(deps);
+  let json: string;
+  try {
+    const dump = await store.exportAll();
+    json = JSON.stringify(dump, null, 2);
+  } finally {
+    store.close();
+  }
+
+  if (target) {
+    writeFileSync(target, `${json}\n`, 'utf8');
+    out.line(`murmur: memoria exportada a ${target}.`);
+    return ok(out);
+  }
+
+  out.line(json);
+  return ok(out);
+}
+
+async function cmdMemoryPrune(out: Output, deps: CliDeps): Promise<CliResult> {
+  const { retentionDays } = deps.config.load().privacy;
+  if (retentionDays <= 0) {
+    out.line('murmur: la retención está desactivada (retentionDays=0); no se ha podado nada.');
+    out.line('  Actívala con: murmur config set-privacy retentionDays <días>');
+    return ok(out);
+  }
+
+  const now = deps.now ?? Date.now;
+  const cutoff = now() - retentionDays * 24 * 60 * 60 * 1000;
+  const store = openMemoryStore(deps);
+  try {
+    await store.pruneOlderThan(cutoff);
+  } finally {
+    store.close();
+  }
+  out.line(`murmur: aplicada la retención de ${retentionDays} días.`);
   return ok(out);
 }

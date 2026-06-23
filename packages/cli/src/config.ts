@@ -5,19 +5,40 @@ import { ConfigError } from '@murmur/shared';
 
 export type Theme = 'system' | 'dark' | 'light';
 
+/** Controles de privacidad del usuario. Todos con defaults conservadores. */
+export interface PrivacyConfig {
+  /** Si `true`, el orchestrator no inyecta contexto RAG en el prompt. */
+  localOnlyMode: boolean;
+  /** Si `false`, no se persiste el texto de los mensajes. */
+  storeTranscripts: boolean;
+  /** Si `true`, se redactan los mensajes (redactSensitive) antes de persistir. */
+  redactBeforeStore: boolean;
+  /** Días de retención; `0` = sin límite. */
+  retentionDays: number;
+}
+
 export interface MurmurConfig {
   openaiApiKey?: string;
   hotkey: string;
   model: string;
   voice: string;
   theme: Theme;
+  privacy: PrivacyConfig;
 }
+
+export const DEFAULT_PRIVACY: PrivacyConfig = {
+  localOnlyMode: false,
+  storeTranscripts: true,
+  redactBeforeStore: false,
+  retentionDays: 0,
+};
 
 export const DEFAULT_CONFIG: Omit<MurmurConfig, 'openaiApiKey'> = {
   hotkey: 'CommandOrControl+Shift+Space',
   model: 'gpt-realtime',
   voice: 'alloy',
   theme: 'system',
+  privacy: DEFAULT_PRIVACY,
 };
 
 const CONFIG_FILE = 'config.json';
@@ -94,6 +115,13 @@ export class ConfigStore {
   setOpenAiKey(key: string): MurmurConfig {
     return this.save({ openaiApiKey: key });
   }
+
+  /** Combina `patch` sobre la privacidad actual (normalizada) y la persiste. */
+  setPrivacy(patch: Partial<PrivacyConfig>): MurmurConfig {
+    const current = this.load().privacy;
+    const next = normalizePrivacy({ ...current, ...patch });
+    return this.save({ privacy: next });
+  }
 }
 
 function isNotFound(err: unknown): boolean {
@@ -107,7 +135,7 @@ function isNotFound(err: unknown): boolean {
 
 /** Aplica defaults y descarta campos desconocidos o con tipos inválidos. */
 function normalize(raw: Record<string, unknown>): MurmurConfig {
-  const config: MurmurConfig = { ...DEFAULT_CONFIG };
+  const config: MurmurConfig = { ...DEFAULT_CONFIG, privacy: { ...DEFAULT_PRIVACY } };
 
   if (typeof raw.openaiApiKey === 'string') {
     config.openaiApiKey = raw.openaiApiKey;
@@ -124,6 +152,29 @@ function normalize(raw: Record<string, unknown>): MurmurConfig {
   if (typeof raw.theme === 'string' && (VALID_THEMES as readonly string[]).includes(raw.theme)) {
     config.theme = raw.theme as Theme;
   }
+  if (raw.privacy !== null && typeof raw.privacy === 'object' && !Array.isArray(raw.privacy)) {
+    config.privacy = normalizePrivacy(raw.privacy as Record<string, unknown>);
+  }
 
   return config;
+}
+
+/** Normaliza la privacidad: defaults para campos ausentes o con tipo inválido. */
+function normalizePrivacy(raw: Record<string, unknown>): PrivacyConfig {
+  const privacy: PrivacyConfig = { ...DEFAULT_PRIVACY };
+
+  if (typeof raw.localOnlyMode === 'boolean') {
+    privacy.localOnlyMode = raw.localOnlyMode;
+  }
+  if (typeof raw.storeTranscripts === 'boolean') {
+    privacy.storeTranscripts = raw.storeTranscripts;
+  }
+  if (typeof raw.redactBeforeStore === 'boolean') {
+    privacy.redactBeforeStore = raw.redactBeforeStore;
+  }
+  if (typeof raw.retentionDays === 'number' && Number.isFinite(raw.retentionDays)) {
+    privacy.retentionDays = raw.retentionDays > 0 ? Math.floor(raw.retentionDays) : 0;
+  }
+
+  return privacy;
 }

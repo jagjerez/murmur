@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { MurmurError, ConfigError, AudioError, ModelError, MemoryError } from './errors';
+import { MurmurError, ConfigError, AudioError, ModelError, MemoryError, HotkeyError } from './errors';
 
 describe('errores', () => {
   it('MurmurError lleva código y es Error', () => {
@@ -14,6 +14,9 @@ describe('errores', () => {
     expect(new AudioError('x').code).toBe('AUDIO_ERROR');
     expect(new ModelError('x').code).toBe('MODEL_ERROR');
     expect(new MemoryError('x').code).toBe('MEMORY_ERROR');
+    expect(new HotkeyError('x').code).toBe('HOTKEY_ERROR');
     expect(new ConfigError('x')).toBeInstanceOf(MurmurError);
+    expect(new HotkeyError('x')).toBeInstanceOf(MurmurError);
+    expect(new HotkeyError('x').name).toBe('HotkeyError');
   });
 });

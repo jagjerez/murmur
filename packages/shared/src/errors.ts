@@ -36,3 +36,10 @@ export class MemoryError extends MurmurError {
     this.name = 'MemoryError';
   }
 }
+
+export class HotkeyError extends MurmurError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, 'HOTKEY_ERROR', options);
+    this.name = 'HotkeyError';
+  }
+}

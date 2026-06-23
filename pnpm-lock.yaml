@@ -188,6 +188,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@murmur/audio':
+        specifier: workspace:*
+        version: link:../audio
       '@murmur/shared':
         specifier: workspace:*
         version: link:../shared

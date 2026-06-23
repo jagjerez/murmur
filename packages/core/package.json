@@ -14,6 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@murmur/audio": "workspace:*",
     "@murmur/shared": "workspace:*"
   },
   "devDependencies": {

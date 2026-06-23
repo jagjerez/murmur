@@ -19,7 +19,7 @@
 | 3    | Hotkey global (native Rust + Tauri global-shortcut)                                                      | ✅ COMPLETA (en `main`) |
 | 4    | Audio real (captura/reproducción, AudioStream PCM, enumeración de dispositivos)                          | ✅ COMPLETA (en `main`) |
 | 5    | OpenAI Realtime (RealtimeModelProvider sobre WebSocket, mockeado en tests)                               | ✅ COMPLETA (en `main`) |
-| 6    | SQLite (MemoryStore persistente, sesiones/mensajes/memoria, migraciones)                                 | ⬜ pendiente            |
+| 6    | SQLite (MemoryStore persistente, sesiones/mensajes/memoria, migraciones)                                 | ✅ COMPLETA (en `main`) |
 | 7    | RAG embeddings + retrieval (EmbeddingProvider, vectores en SQLite, RagRetriever)                         | ⬜ pendiente            |
 | 8    | RAG summaries + facts (SessionSummarizer, FactExtractor, alimenta contexto)                              | ⬜ pendiente            |
 | 9    | Orchestrator completo (hotkey→captura→modelo→contexto→respuesta→persistir)                               | ⬜ pendiente            |
@@ -84,3 +84,13 @@
     `RealtimeConnectOptions` extendida (`onUserTranscript`/`onAssistantTranscript`/`onOpen`/`instructions`).
     `@murmur/core` ahora depende de `@murmur/audio` (PCM/base64). 178 tests TS (core 39: 16 realtime + 7 fake-ws),
     cargo 11. Sin red en tests; sin keys reales. Commits `fd90847` (fake-ws), `a35e5e2` (provider).
+- Fase 6: SQLite (mergeada en `main`, commit `28eda98`; Workflow `pass` + smoke del binario por el
+  orquestador). Motor **`node:sqlite`** (Node 26, cero deps, sin build nativo). `@murmur/rag/src/sqlite/`:
+  `db.ts` (`openDatabase`/`migrate` idempotente, `user_version`, FKs + `ON DELETE CASCADE`, índices),
+  `SqliteMemoryStore` (interfaz `MemoryStore` + `getByType`/`recent`/`get`/`delete`/`count`, valida type
+  → `MemoryError`), `ConversationStore` (sesiones/mensajes con `Session`/`Message`/`Role`), `createSqliteStore`
+  (`{memory,conversation,reset,close,path}`). CLI: `memory reset --yes` borra de verdad, `status` muestra
+  conteo; `storeFactory` inyectable. **Bug de empaquetado corregido**: `tsup removeNodeProtocol:true`
+  reescribía `node:sqlite`→`sqlite` rompiendo el binario en runtime (invisible a Vitest, que corre el
+  fuente) → `removeNodeProtocol:false` en `tsup.config.ts` de rag y cli, verificado con el binario.
+  202 tests TS (rag 26, cli 32), cargo 11. IDs `randomUUID`, `now()` inyectable, tests con `:memory:`/temp.

@@ -56,9 +56,9 @@ describe('openDatabase + migrate', () => {
   it('crea índices por type y session_id', () => {
     const db = openDatabase(':memory:');
     migrate(db);
-    const rows = db
-      .prepare("SELECT name FROM sqlite_master WHERE type = 'index'")
-      .all() as { name: string }[];
+    const rows = db.prepare("SELECT name FROM sqlite_master WHERE type = 'index'").all() as {
+      name: string;
+    }[];
     const names = rows.map((r) => r.name);
     expect(names).toContain('idx_memory_items_type');
     expect(names).toContain('idx_memory_items_session_id');

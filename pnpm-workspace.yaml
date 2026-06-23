@@ -18,7 +18,7 @@ catalog:
   '@types/react': ^19.0.2
   '@types/react-dom': ^19.0.2
   '@types/node': ^22.10.5
-  vite: ^6.0.7
+  vite: ^7.0.0
   '@vitejs/plugin-react': ^4.3.4
   '@tauri-apps/cli': ^2.2.2
   '@tauri-apps/api': ^2.2.0

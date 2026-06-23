@@ -15,7 +15,7 @@
 | ---- | -------------------------------------------------------------------------------------------------------- | ----------------------- |
 | 0    | Fundamentos + design system + brief                                                                      | ✅ COMPLETA (en `main`) |
 | 1    | CLI real (`start`, `config`, `config set-openai-key`, `memory reset`, `status`, `~/.murmur/config.json`) | ✅ COMPLETA (en `main`) |
-| 2    | UI Tauri: cápsula real (5 estados, animaciones, dark/light, draggable, PTT/toggle)                       | ⬜ pendiente            |
+| 2    | UI Tauri: cápsula real (5 estados, animaciones, dark/light, draggable, PTT/toggle)                       | ✅ COMPLETA (en `main`) |
 | 3    | Hotkey global (native Rust + Tauri global-shortcut)                                                      | ⬜ pendiente            |
 | 4    | Audio real (captura/reproducción, AudioStream PCM, enumeración de dispositivos)                          | ⬜ pendiente            |
 | 5    | OpenAI Realtime (RealtimeModelProvider sobre WebSocket, mockeado en tests)                               | ⬜ pendiente            |
@@ -47,3 +47,7 @@
 - Fase 1: CLI real + `ConfigStore` (`~/.murmur/config.json`, `MURMUR_HOME`, perms 0600, key
   redactada). 43 tests verdes (30 en `murmur`). Review independiente: PASS. Mergeada en `main`
   (commit `1dea78f`).
+- Fase 2: cápsula real (lógica pura visual/interacción/anclaje + componentes `Capsule`/`Waveform`
+  - hook). Setup Vitest+jsdom+RTL en `apps/desktop`. 76 tests verdes (33 en desktop). CSP de Tauri
+    fijado (cierra TODO(F2)); catalog `vite ^6→^7`. Puerta de calidad verde verificada en el
+    orquestador. Mergeada en `main` (commit `4ea00e6`).

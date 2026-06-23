@@ -1,4 +1,4 @@
-import { MurmurError, type AssistantState } from '@murmur/shared';
+import { MurmurError, redactSensitive, type AssistantState } from '@murmur/shared';
 import {
   createPushPullStream,
   type AudioStream,
@@ -32,6 +32,20 @@ export interface OrchestratorConnection {
 }
 
 /**
+ * Flags de privacidad que el orchestrator honra. Todos opcionales; el valor
+ * efectivo por defecto es el más conservador respecto a la funcionalidad previa
+ * (sin modo local, se guardan transcripciones, sin redacción) para no romper F9/F10.
+ */
+export interface OrchestratorPrivacy {
+  /** Si `true`, no se inyecta contexto RAG en las instructions (no se envía memoria al modelo). */
+  localOnlyMode?: boolean;
+  /** Si `false`, no se persiste el texto de los mensajes (sí se emiten por `onTranscript`). */
+  storeTranscripts?: boolean;
+  /** Si `true`, se aplica `redactSensitive` al texto antes de `addMessage`. */
+  redactBeforeStore?: boolean;
+}
+
+/**
  * Dependencias del orchestrator. Todas opcionales para mantener compat con F0
  * (`new ConversationOrchestrator()` arranca en `idle`); los métodos del pipeline
  * exigen las que necesitan con un error claro si faltan.
@@ -45,6 +59,8 @@ export interface OrchestratorDeps {
   retriever?: IndexingRetriever;
   summarizer?: SessionSummarizer;
   factExtractor?: FactExtractor;
+  /** Controles de privacidad; ver `OrchestratorPrivacy`. */
+  privacy?: OrchestratorPrivacy;
   /** Idioma base de la persona del system prompt (es por defecto). */
   locale?: PromptLocale;
   onStateChange?: (state: AssistantState) => void;
@@ -236,11 +252,7 @@ export class ConversationOrchestrator {
   }
 
   private handleUserTranscript(text: string): void {
-    const conversation = this.deps.conversation;
-    const session = this.currentSession;
-    if (conversation && session) {
-      conversation.addMessage({ sessionId: session.id, role: 'user', text });
-    }
+    this.persistMessage('user', text);
     this.deps.onTranscript?.({ role: 'user', text });
   }
 
@@ -259,14 +271,30 @@ export class ConversationOrchestrator {
     const text = this.assistantBuffer;
     this.assistantBuffer = '';
     if (text.length > 0) {
-      const conversation = this.deps.conversation;
-      const session = this.currentSession;
-      if (conversation && session) {
-        conversation.addMessage({ sessionId: session.id, role: 'assistant', text });
-      }
+      this.persistMessage('assistant', text);
       this.deps.onTranscript?.({ role: 'assistant', text });
     }
     this.closeOutputStream();
+  }
+
+  /**
+   * Persiste un mensaje honrando la privacidad: si `storeTranscripts === false` no
+   * guarda el texto; si `redactBeforeStore` aplica `redactSensitive` antes de
+   * `addMessage`. La emisión por `onTranscript` (en la UI) ocurre fuera de aquí y
+   * usa el texto original.
+   */
+  private persistMessage(role: 'user' | 'assistant', text: string): void {
+    const privacy = this.deps.privacy;
+    if (privacy?.storeTranscripts === false) {
+      return;
+    }
+    const conversation = this.deps.conversation;
+    const session = this.currentSession;
+    if (!conversation || !session) {
+      return;
+    }
+    const stored = privacy?.redactBeforeStore ? redactSensitive(text) : text;
+    conversation.addMessage({ sessionId: session.id, role, text: stored });
   }
 
   // --- Salida de audio --------------------------------------------------------
@@ -332,8 +360,12 @@ export class ConversationOrchestrator {
   private async buildInstructions(query: string): Promise<string> {
     const locale = this.deps.locale;
     const retriever = this.deps.retriever;
+    // En modo local no se recupera memoria: no se envía contexto RAG al modelo.
+    const localOnly = this.deps.privacy?.localOnlyMode === true;
     const context =
-      retriever === undefined ? [] : await retriever.retrieve(query, { limit: CONTEXT_LIMIT });
+      retriever === undefined || localOnly
+        ? []
+        : await retriever.retrieve(query, { limit: CONTEXT_LIMIT });
     return buildSystemPrompt({ context, ...(locale !== undefined ? { locale } : {}) });
   }
 

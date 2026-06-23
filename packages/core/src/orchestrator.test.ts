@@ -368,3 +368,114 @@ describe('ConversationOrchestrator (pipeline)', () => {
     await expect(h.orch.startListening()).rejects.toThrow(/sesión|session/i);
   });
 });
+
+// --- Privacidad (F12) ---------------------------------------------------------
+
+describe('ConversationOrchestrator (privacidad)', () => {
+  function buildWithPrivacy(
+    privacy: {
+      localOnlyMode?: boolean;
+      storeTranscripts?: boolean;
+      redactBeforeStore?: boolean;
+    },
+    extra: { retriever?: RagRetriever } = {},
+  ): {
+    orch: ConversationOrchestrator;
+    realtime: MockRealtimeProvider;
+    store: ReturnType<typeof createSqliteStore>;
+  } {
+    const realtime = createMockRealtimeProvider();
+    const store = createSqliteStore(':memory:');
+    const orch = new ConversationOrchestrator({
+      realtime,
+      input: createMockVoiceInput([]),
+      output: createMemoryVoiceOutput(),
+      conversation: store.conversation,
+      connection: { apiKey: 'k', model: 'm' },
+      privacy,
+      ...extra,
+    });
+    return { orch, realtime, store };
+  }
+
+  it('localOnlyMode no inyecta el contexto RAG en las instructions', async () => {
+    const retriever: RagRetriever = {
+      retrieve: () =>
+        Promise.resolve([
+          { id: '1', type: 'long_term_fact', content: 'al usuario le gusta el té', createdAt: 1 },
+        ]),
+    };
+    const { orch, realtime } = buildWithPrivacy({ localOnlyMode: true }, { retriever });
+    await orch.startSession();
+
+    const instructions = realtime.lastOptions?.instructions ?? '';
+    expect(instructions).toMatch(/murmur/i);
+    expect(instructions).not.toMatch(/Lo que recuerdo/i);
+    expect(instructions).not.toContain('al usuario le gusta el té');
+  });
+
+  it('sin localOnlyMode sí inyecta el contexto RAG', async () => {
+    const retriever: RagRetriever = {
+      retrieve: () =>
+        Promise.resolve([
+          { id: '1', type: 'long_term_fact', content: 'al usuario le gusta el té', createdAt: 1 },
+        ]),
+    };
+    const { orch, realtime } = buildWithPrivacy({ localOnlyMode: false }, { retriever });
+    await orch.startSession();
+
+    expect(realtime.lastOptions?.instructions).toContain('al usuario le gusta el té');
+  });
+
+  it('storeTranscripts:false no persiste el texto de los mensajes', async () => {
+    const { orch, realtime, store } = buildWithPrivacy({ storeTranscripts: false });
+    const session = await orch.startSession();
+
+    realtime.emitUserTranscript('hola, soy Ana');
+    realtime.emitAssistantTranscript('Encantado, Ana');
+    realtime.emitResponseDone();
+    await orch.flush();
+
+    expect(store.conversation.getMessages(session.id)).toHaveLength(0);
+  });
+
+  it('storeTranscripts:false (default true) sí persiste cuando no se especifica', async () => {
+    const { orch, realtime, store } = buildWithPrivacy({});
+    const session = await orch.startSession();
+
+    realtime.emitUserTranscript('hola');
+    realtime.emitResponseDone();
+    await orch.flush();
+
+    expect(store.conversation.getMessages(session.id).map((m) => m.text)).toEqual(['hola']);
+  });
+
+  it('redactBeforeStore redacta los mensajes antes de persistir', async () => {
+    const { orch, realtime, store } = buildWithPrivacy({ redactBeforeStore: true });
+    const session = await orch.startSession();
+
+    realtime.emitUserTranscript('mi correo es ana@example.com');
+    realtime.emitAssistantTranscript('apuntado: ana@example.com');
+    realtime.emitResponseDone();
+    await orch.flush();
+
+    const texts = store.conversation.getMessages(session.id).map((m) => m.text);
+    expect(texts).toEqual(['mi correo es [email]', 'apuntado: [email]']);
+    for (const t of texts) {
+      expect(t).not.toContain('ana@example.com');
+    }
+  });
+
+  it('redactBeforeStore false deja el texto intacto', async () => {
+    const { orch, realtime, store } = buildWithPrivacy({ redactBeforeStore: false });
+    const session = await orch.startSession();
+
+    realtime.emitUserTranscript('mi correo es ana@example.com');
+    realtime.emitResponseDone();
+    await orch.flush();
+
+    expect(store.conversation.getMessages(session.id).map((m) => m.text)).toEqual([
+      'mi correo es ana@example.com',
+    ]);
+  });
+});

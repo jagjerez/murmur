@@ -18,7 +18,7 @@
 | 2    | UI Tauri: cápsula real (5 estados, animaciones, dark/light, draggable, PTT/toggle)                       | ✅ COMPLETA (en `main`) |
 | 3    | Hotkey global (native Rust + Tauri global-shortcut)                                                      | ✅ COMPLETA (en `main`) |
 | 4    | Audio real (captura/reproducción, AudioStream PCM, enumeración de dispositivos)                          | ✅ COMPLETA (en `main`) |
-| 5    | OpenAI Realtime (RealtimeModelProvider sobre WebSocket, mockeado en tests)                               | ⬜ pendiente            |
+| 5    | OpenAI Realtime (RealtimeModelProvider sobre WebSocket, mockeado en tests)                               | ✅ COMPLETA (en `main`) |
 | 6    | SQLite (MemoryStore persistente, sesiones/mensajes/memoria, migraciones)                                 | ⬜ pendiente            |
 | 7    | RAG embeddings + retrieval (EmbeddingProvider, vectores en SQLite, RagRetriever)                         | ⬜ pendiente            |
 | 8    | RAG summaries + facts (SessionSummarizer, FactExtractor, alimenta contexto)                              | ⬜ pendiente            |
@@ -74,3 +74,13 @@
   audio 41 (24 pcm + 8 stream + 9 mock), desktop 58 (12 web-audio + 5 use-audio-level + nuevos de App).
   Puerta de calidad verde: typecheck/lint/test/build/prettier + `cargo test` 11. Commits:
   `9a1b61a` (pcm), `2aaf748` (stream), `cb74d85` (mock), `fb6d82f` (desktop), `7c55d18` (formato docs).
+- Fase 5: OpenAI Realtime (mergeada en `main`, commit `5abc8b9`; Workflow `pass` al primer intento
+  - confirmación del orquestador). `@murmur/core`: `openai-realtime.ts` (`createOpenAIRealtimeProvider`
+    con WebSocket inyectable vía factory, default `globalThis.WebSocket`; URL `wss://api.openai.com/v1/realtime`
+  - subprotocolos con la key —caveat de seguridad documentado, endurecimiento F12/F16—; `session.update`
+    pcm16/voice/`server_vad`; `sendAudio`→append base64, `commit`→commit+`response.create`, `interrupt`→cancel+clear,
+    `close` idempotente; mapeo de estados listening→thinking→speaking→idle; audio out GA+preview; transcripts
+    usuario/asistente; `error`→`ModelError`), `fake-websocket.ts` (`createFakeWebSocket`, reutilizable en F9),
+    `RealtimeConnectOptions` extendida (`onUserTranscript`/`onAssistantTranscript`/`onOpen`/`instructions`).
+    `@murmur/core` ahora depende de `@murmur/audio` (PCM/base64). 178 tests TS (core 39: 16 realtime + 7 fake-ws),
+    cargo 11. Sin red en tests; sin keys reales. Commits `fd90847` (fake-ws), `a35e5e2` (provider).

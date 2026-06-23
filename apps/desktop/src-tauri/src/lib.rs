@@ -1,9 +1,16 @@
 //! Cáscara Tauri de murmur.
 //!
 //! Fase 3: se registra el plugin `global-shortcut` para los atajos globales. El registro real del
-//! atajo lo hace el webview vía `@tauri-apps/plugin-global-shortcut` (ver `src/hotkey`). La build
-//! nativa de Tauri queda FUERA del pipeline de CI; este código se mantiene coherente pero no se
-//! compila ahí.
+//! atajo lo hace el webview vía `@tauri-apps/plugin-global-shortcut` (ver `src/hotkey`).
+//!
+//! Fase 11: se exponen los comandos de configuración (`get_config`/`set_config`/`set_openai_key`/
+//! `read_openai_key`, ver `src/config.rs`) que el `ConfigClient` del webview invoca. Persisten en
+//! `~/.murmur/config.json` (mismo archivo que el CLI de F1); la API key nunca viaja en claro.
+//!
+//! La build nativa de Tauri queda FUERA del pipeline de CI; este código se mantiene coherente
+//! pero no se compila ahí.
+
+mod config;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -16,6 +23,12 @@ pub fn run() {
     }
 
     builder
+        .invoke_handler(tauri::generate_handler![
+            config::get_config,
+            config::set_config,
+            config::set_openai_key,
+            config::read_openai_key,
+        ])
         .run(tauri::generate_context!())
         .expect("error al arrancar la app de murmur");
 }

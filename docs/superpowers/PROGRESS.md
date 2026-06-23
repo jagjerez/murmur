@@ -21,7 +21,7 @@
 | 5    | OpenAI Realtime (RealtimeModelProvider sobre WebSocket, mockeado en tests)                               | ✅ COMPLETA (en `main`) |
 | 6    | SQLite (MemoryStore persistente, sesiones/mensajes/memoria, migraciones)                                 | ✅ COMPLETA (en `main`) |
 | 7    | RAG embeddings + retrieval (EmbeddingProvider, vectores en SQLite, RagRetriever)                         | ✅ COMPLETA (en `main`) |
-| 8    | RAG summaries + facts (SessionSummarizer, FactExtractor, alimenta contexto)                              | ⬜ pendiente            |
+| 8    | RAG summaries + facts (SessionSummarizer, FactExtractor, alimenta contexto)                              | ✅ COMPLETA (en `main`) |
 | 9    | Orchestrator completo (hotkey→captura→modelo→contexto→respuesta→persistir)                               | ⬜ pendiente            |
 | 10   | Prompt (persona cálida, construcción de contexto RAG, presupuesto de tokens)                             | ⬜ pendiente            |
 | 11   | UI avanzada (onboarding, ajustes, estados de error/vacío, transcripción)                                 | ⬜ pendiente            |
@@ -103,3 +103,13 @@
   `upsertEmbedding`/`getEmbedding`/`allEmbeddings`, y `createSqliteRagRetriever` (`index`/`retrieve`
   top-k por coseno, `retrieveScored`, filtra por modelo). 253 tests TS (rag 74), cargo 11. Sin red,
   SQL parametrizada. NITs no bloqueantes: input vacío en embed, skip silencioso si vector undefined.
+- Fase 8: RAG summaries + facts (mergeada en `main`, commit `0cac448`; Workflow `pass` al primer
+  intento + confirmación del orquestador). `@murmur/rag`: `chat.ts` (`ChatProvider`;
+  `createOpenAIChatProvider` POST `/v1/chat/completions`, default `gpt-4o-mini`, `fetchFn` inyectable,
+  error→`ModelError`, key no logueada; `createMockChatProvider`), `summarizer.ts`
+  (`createSessionSummarizer.summarize(sessionId)`: lee mensajes, sesión vacía no llama al LLM, guarda
+  `session_summary` vía `sink`), `facts.ts` (`createFactExtractor.extract(text)`: parser robusto de array
+  JSON con escáner de corchetes que respeta strings/escapes, tolera fences/prosa, sin array→[], guarda
+  `long_term_fact`). `sink` desacopla generación de indexación (F9 inyectará `retriever.index`). 99 rag
+  tests, cargo 11. Drift menor no bloqueante: `responseFormat` mencionado en el spec pero no implementado
+  (no exigido; el parseo robusto no lo necesita).

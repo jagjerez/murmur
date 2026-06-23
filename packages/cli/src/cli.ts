@@ -200,7 +200,9 @@ function cmdMemory(out: Output, deps: CliDeps, sub: string | undefined, rest: st
     }
   }
 
-  out.line(existed ? 'murmur: memoria local borrada.' : 'murmur: no había memoria local que borrar.');
+  out.line(
+    existed ? 'murmur: memoria local borrada.' : 'murmur: no había memoria local que borrar.',
+  );
   return ok(out);
 }
 

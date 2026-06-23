@@ -6,6 +6,7 @@ import {
   ModelError,
   MemoryError,
   HotkeyError,
+  PluginError,
 } from './errors';
 
 describe('errores', () => {
@@ -22,8 +23,11 @@ describe('errores', () => {
     expect(new ModelError('x').code).toBe('MODEL_ERROR');
     expect(new MemoryError('x').code).toBe('MEMORY_ERROR');
     expect(new HotkeyError('x').code).toBe('HOTKEY_ERROR');
+    expect(new PluginError('x').code).toBe('PLUGIN_ERROR');
     expect(new ConfigError('x')).toBeInstanceOf(MurmurError);
     expect(new HotkeyError('x')).toBeInstanceOf(MurmurError);
+    expect(new PluginError('x')).toBeInstanceOf(MurmurError);
     expect(new HotkeyError('x').name).toBe('HotkeyError');
+    expect(new PluginError('x').name).toBe('PluginError');
   });
 });

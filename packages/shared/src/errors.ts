@@ -43,3 +43,10 @@ export class HotkeyError extends MurmurError {
     this.name = 'HotkeyError';
   }
 }
+
+export class PluginError extends MurmurError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, 'PLUGIN_ERROR', options);
+    this.name = 'PluginError';
+  }
+}

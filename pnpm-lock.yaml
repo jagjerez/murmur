@@ -227,6 +227,9 @@ importers:
         specifier: workspace:*
         version: link:../shared
     devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.20.0
       tsup:
         specifier: 'catalog:'
         version: 8.5.1(postcss@8.5.15)(typescript@5.9.3)

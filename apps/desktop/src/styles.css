@@ -1,32 +1,220 @@
+:root {
+  --mur-anchor-gap: 16px;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
 }
+
 body {
   font-family: var(--mur-font-ui);
   background: var(--mur-surface);
   color: var(--mur-text);
-  height: 100vh;
-  display: grid;
-  place-items: center;
+  min-height: 100vh;
 }
-.pill {
+
+/* ── Cápsula ───────────────────────────────────────────────────────────── */
+.capsule {
+  z-index: 10;
+}
+
+.capsule-body {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 11px 17px;
+  gap: 12px;
+  padding: 11px 18px;
   border-radius: var(--mur-radius-full);
   background: var(--mur-glass);
   border: 1px solid var(--mur-border);
   box-shadow: var(--mur-shadow-glass);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
 }
-.pill .dot {
+
+.capsule-body:focus-visible {
+  outline: 2px solid var(--mur-accent-400);
+  outline-offset: 2px;
+}
+
+.dot {
+  flex: none;
   width: 11px;
   height: 11px;
   border-radius: 50%;
+  box-shadow: 0 0 0 0 currentColor;
 }
-.pill .label {
+
+.label {
   font-size: 12px;
+  font-family: var(--mur-font-mono);
   color: var(--mur-text-muted);
+  white-space: nowrap;
+}
+
+/* ── Ecualizador ───────────────────────────────────────────────────────── */
+.eq {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+}
+
+.eq-bar {
+  display: block;
+  width: 3px;
+  height: 5px;
+  border-radius: 2px;
+  opacity: 0.55;
+  transform-origin: center;
+}
+
+.eq--active .eq-bar {
+  animation: equalize 900ms var(--mur-easing-standard) infinite;
+}
+
+/* ── Animaciones de estado ─────────────────────────────────────────────── */
+.dot--breathe {
+  animation: breathe 2400ms var(--mur-easing-standard) infinite;
+}
+.dot--pulse {
+  animation: pulse 1100ms var(--mur-easing-standard) infinite;
+}
+/* speaking: el punto acompaña al ecualizador con un latido suave */
+.dot--equalize {
+  animation: pulse 700ms var(--mur-easing-standard) infinite;
+}
+.dot--shake {
+  animation: shake 480ms var(--mur-easing-standard) infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 currentColor;
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 0 4px transparent;
+    opacity: 0.5;
+  }
+}
+
+@keyframes equalize {
+  0%,
+  100% {
+    height: 5px;
+    opacity: 0.55;
+  }
+  50% {
+    height: 16px;
+    opacity: 1;
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot--breathe,
+  .dot--pulse,
+  .dot--equalize,
+  .dot--shake,
+  .eq--active .eq-bar {
+    animation: none !important;
+  }
+  /* Mantiene una altura legible en el EQ sin movimiento. */
+  .eq--active .eq-bar {
+    height: 11px;
+    opacity: 0.8;
+  }
+}
+
+/* ── Panel de desarrollo (provisional, F11) ────────────────────────────── */
+.dev-panel {
+  position: fixed;
+  top: var(--mur-anchor-gap);
+  left: var(--mur-anchor-gap);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  max-width: 320px;
+  border-radius: var(--mur-radius-lg);
+  background: var(--mur-surface-raised);
+  border: 1px solid var(--mur-border);
+  box-shadow: var(--mur-shadow-glass);
+  font-size: 12px;
+}
+
+.dev-panel h2 {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mur-text-muted);
+}
+
+.dev-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dev-row > span {
+  color: var(--mur-text-muted);
+  font-family: var(--mur-font-mono);
+}
+
+.dev-row .group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dev-panel button {
+  padding: 5px 10px;
+  border-radius: var(--mur-radius-sm, 8px);
+  border: 1px solid var(--mur-border);
+  background: var(--mur-glass);
+  color: var(--mur-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.dev-panel button[aria-pressed='true'] {
+  border-color: var(--mur-accent-400);
+  color: var(--mur-accent-400);
+}
+
+.dev-panel button:focus-visible {
+  outline: 2px solid var(--mur-accent-400);
+  outline-offset: 2px;
 }

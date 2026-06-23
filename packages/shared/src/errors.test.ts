@@ -1,0 +1,19 @@
+import { describe, it, expect } from 'vitest';
+import { MurmurError, ConfigError, AudioError, ModelError, MemoryError } from './errors';
+
+describe('errores', () => {
+  it('MurmurError lleva código y es Error', () => {
+    const e = new MurmurError('boom');
+    expect(e).toBeInstanceOf(Error);
+    expect(e.code).toBe('MURMUR_ERROR');
+    expect(e.name).toBe('MurmurError');
+  });
+
+  it('las subclases fijan su código y son instanceof MurmurError', () => {
+    expect(new ConfigError('x').code).toBe('CONFIG_ERROR');
+    expect(new AudioError('x').code).toBe('AUDIO_ERROR');
+    expect(new ModelError('x').code).toBe('MODEL_ERROR');
+    expect(new MemoryError('x').code).toBe('MEMORY_ERROR');
+    expect(new ConfigError('x')).toBeInstanceOf(MurmurError);
+  });
+});

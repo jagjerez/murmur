@@ -22,7 +22,7 @@
 | 6    | SQLite (MemoryStore persistente, sesiones/mensajes/memoria, migraciones)                                 | ✅ COMPLETA (en `main`) |
 | 7    | RAG embeddings + retrieval (EmbeddingProvider, vectores en SQLite, RagRetriever)                         | ✅ COMPLETA (en `main`) |
 | 8    | RAG summaries + facts (SessionSummarizer, FactExtractor, alimenta contexto)                              | ✅ COMPLETA (en `main`) |
-| 9    | Orchestrator completo (hotkey→captura→modelo→contexto→respuesta→persistir)                               | ⬜ pendiente            |
+| 9    | Orchestrator completo (hotkey→captura→modelo→contexto→respuesta→persistir)                               | ✅ COMPLETA (en `main`) |
 | 10   | Prompt (persona cálida, construcción de contexto RAG, presupuesto de tokens)                             | ⬜ pendiente            |
 | 11   | UI avanzada (onboarding, ajustes, estados de error/vacío, transcripción)                                 | ⬜ pendiente            |
 | 12   | Privacidad (modo local, retención, borrado/exportación, memoria explícita)                               | ⬜ pendiente            |
@@ -113,8 +113,9 @@
   `long_term_fact`). `sink` desacopla generación de indexación (F9 inyectará `retriever.index`). 99 rag
   tests, cargo 11. Drift menor no bloqueante: `responseFormat` mencionado en el spec pero no implementado
   (no exigido; el parseo robusto no lo necesita).
-- Fase 9: Orchestrator completo (rama `phase-9`, gate verde; commits `365fc6f` mock-realtime, `f3e4959`
-  pipeline, `728463e` prettier docs). `@murmur/core`: `providers/mock-realtime.ts`
+- Fase 9: Orchestrator completo (mergeada en `main`, commit `fa49256`; Workflow `pass` al primer
+  intento + confirmación del orquestador; commits `365fc6f` mock-realtime, `f3e4959`
+  pipeline). `@murmur/core`: `providers/mock-realtime.ts`
   (`createMockRealtimeProvider`: `connect` captura options/callbacks; sesión registra
   `sentAudio`/`commits`/`interrupts`/`closes`; helpers `emitState`/`emitAudio`/`emitUserTranscript`/
   `emitAssistantTranscript`/`emitResponseDone`/`emitError`). `orchestrator.ts` REESCRITO:
@@ -129,3 +130,6 @@
   en el webview del desktop, así que NO usa `node:crypto`; usa `globalThis.crypto.randomUUID()`
   (Web Crypto, Node>=19 y browser) — `node:crypto` rompía el `vite build` del desktop. 60 core tests
   (15 orchestrator + 8 mock-realtime), 299 TS total, cargo 11. Sin red ni hardware en tests.
+  NITs de robustez (seguimiento en F11, cuando el orchestrator se cablea en cli/desktop): `interrupt()`
+  debería limpiar `assistantBuffer` (evitar persistir respuesta cancelada tras barge-in); encadenar la
+  promesa de `playback` en multi-turno; documentar el contrato fire-and-forget de `startListening`.

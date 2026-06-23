@@ -19,10 +19,10 @@ sin red en tests; sin dependencias nuevas (usa `globalThis.WebSocket`).
 **Files:** `packages/core/src/providers/fake-websocket.ts` (+ `fake-websocket.test.ts`), export en index.
 
 - [ ] Implementar `createFakeWebSocket()` con la forma `WebSocketLike`:
-  `send(data)` (acumula en `sent: string[]`), `close()` (marca cerrado, dispara `close`),
-  `addEventListener(type, cb)`/props `onopen/onmessage/onclose/onerror`, `readyState`. Helpers de
-  test: `simulateOpen()`, `emitServerEvent(obj)` (dispara `message` con `JSON.stringify`),
-  `simulateError()`, `simulateClose()`. Captura los subprotocolos pasados al constructor.
+      `send(data)` (acumula en `sent: string[]`), `close()` (marca cerrado, dispara `close`),
+      `addEventListener(type, cb)`/props `onopen/onmessage/onclose/onerror`, `readyState`. Helpers de
+      test: `simulateOpen()`, `emitServerEvent(obj)` (dispara `message` con `JSON.stringify`),
+      `simulateError()`, `simulateClose()`. Captura los subprotocolos pasados al constructor.
 - [ ] Test (falla→pasa): emitir open/mensaje/close llama a los listeners; `sent` registra envíos.
 - [ ] Commit: `feat(core): FakeWebSocket para tests de realtime`.
 
@@ -31,7 +31,7 @@ sin red en tests; sin dependencias nuevas (usa `globalThis.WebSocket`).
 **Files:** `packages/core/src/providers/realtime-model-provider.ts`.
 
 - [ ] Añadir callbacks opcionales `onUserTranscript`, `onAssistantTranscript`, `onOpen` (no rompe a
-  nadie). 
+      nadie).
 - [ ] `pnpm --filter @murmur/core typecheck` verde. (Se commitea junto con Task 3.)
 
 ## Task 3: `OpenAIRealtimeProvider`
@@ -39,15 +39,18 @@ sin red en tests; sin dependencias nuevas (usa `globalThis.WebSocket`).
 **Files:** `packages/core/src/providers/openai-realtime.ts` (+ `openai-realtime.test.ts`), `index.ts`.
 
 Contrato:
+
 ```ts
 export interface WebSocketLike {
   send(data: string): void;
   close(): void;
   readyState: number;
-  addEventListener(type: 'open'|'message'|'close'|'error', cb: (ev: unknown) => void): void;
+  addEventListener(type: 'open' | 'message' | 'close' | 'error', cb: (ev: unknown) => void): void;
 }
 export type WebSocketFactory = (url: string, protocols?: string[]) => WebSocketLike;
-export function createOpenAIRealtimeProvider(deps?: { webSocketFactory?: WebSocketFactory }): RealtimeModelProvider;
+export function createOpenAIRealtimeProvider(deps?: {
+  webSocketFactory?: WebSocketFactory;
+}): RealtimeModelProvider;
 ```
 
 - [ ] Tests (fallan) con `createFakeWebSocket` inyectado vía factory:
@@ -67,9 +70,9 @@ export function createOpenAIRealtimeProvider(deps?: { webSocketFactory?: WebSock
   - `interrupt()` → `response.cancel`; `close()` cierra y es idempotente.
   - `emitServerEvent({type:'error', error:{message}})` → `onError(ModelError)`.
 - [ ] Implementar `openai-realtime.ts`: clase de sesión que registra los listeners, hace el
-  `session.update` en `open`, traduce eventos→callbacks/estado, y métodos `sendAudio/commit/interrupt/close`.
-  La key solo va en el subprotocolo; nunca se loguea.
-- [ ] Export en `index.ts` (`createOpenAIRealtimeProvider`, tipos). 
+      `session.update` en `open`, traduce eventos→callbacks/estado, y métodos `sendAudio/commit/interrupt/close`.
+      La key solo va en el subprotocolo; nunca se loguea.
+- [ ] Export en `index.ts` (`createOpenAIRealtimeProvider`, tipos).
 - [ ] `pnpm --filter @murmur/core test/typecheck/build` verde. Commit: `feat(core): OpenAIRealtimeProvider sobre WebSocket inyectable`.
 
 ## Task 4: Verificación de fase

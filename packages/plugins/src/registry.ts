@@ -34,10 +34,7 @@ export interface PluginRegistry {
 }
 
 /** Comprueba que cada `cap` del plugin esté en la allowlist. */
-function capabilitiesAllowed(
-  capabilities: readonly string[],
-  allowed: readonly string[],
-): boolean {
+function capabilitiesAllowed(capabilities: readonly string[], allowed: readonly string[]): boolean {
   return capabilities.every((cap) => allowed.includes(cap));
 }
 

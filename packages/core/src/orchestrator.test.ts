@@ -243,6 +243,66 @@ describe('ConversationOrchestrator (pipeline)', () => {
     expect(h.output.stopped).toBe(true);
   });
 
+  it('interrupt descarta el buffer del asistente: una respuesta cancelada no se persiste', async () => {
+    const h = build([]);
+    const session = await h.orch.startSession();
+
+    // El asistente empezó a responder pero el usuario interrumpe (barge-in).
+    h.realtime.emitState('speaking');
+    h.realtime.emitAssistantTranscript('respuesta a medio');
+
+    await h.orch.interrupt();
+
+    // Tras el barge-in, el modelo vuelve a idle (fin del ciclo cancelado): no debe
+    // persistirse ni emitirse la respuesta cancelada.
+    h.realtime.emitResponseDone();
+    await h.orch.flush();
+
+    const messages = h.store.conversation.getMessages(session.id);
+    expect(messages).toHaveLength(0);
+    expect(h.transcripts).toHaveLength(0);
+  });
+
+  it('interrupt seguido de un turno nuevo persiste solo la respuesta nueva', async () => {
+    const h = build([]);
+    const session = await h.orch.startSession();
+
+    // Respuesta interrumpida.
+    h.realtime.emitState('speaking');
+    h.realtime.emitAssistantTranscript('texto descartado');
+    await h.orch.interrupt();
+
+    // Turno nuevo completo.
+    h.realtime.emitUserTranscript('hola de nuevo');
+    h.realtime.emitAssistantTranscript('hola, dime');
+    h.realtime.emitResponseDone();
+    await h.orch.flush();
+
+    const messages = h.store.conversation.getMessages(session.id);
+    expect(messages.map((m) => m.text)).toEqual(['hola de nuevo', 'hola, dime']);
+  });
+
+  it('multi-turno con audio: encadena la reproducción sin perder chunks ni rechazos', async () => {
+    const h = build([]);
+    await h.orch.startSession();
+
+    // Primer turno con audio.
+    h.realtime.emitState('speaking');
+    const a1 = new Uint8Array([1, 2]);
+    h.realtime.emitAudio(a1);
+    h.realtime.emitResponseDone();
+
+    // Segundo turno con audio (nuevo stream de salida).
+    h.realtime.emitState('speaking');
+    const a2 = new Uint8Array([3, 4]);
+    h.realtime.emitAudio(a2);
+    h.realtime.emitResponseDone();
+
+    await h.orch.flush();
+
+    expect(h.output.chunks()).toEqual([a1, a2]);
+  });
+
   it('onError lleva al estado error y propaga el error', async () => {
     const errors: Error[] = [];
     const realtime = createMockRealtimeProvider();

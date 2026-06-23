@@ -147,7 +147,17 @@ export class ConversationOrchestrator {
     return this.currentSession;
   }
 
-  /** Arranca la captura de audio y envía cada chunk PCM al modelo. */
+  /**
+   * Arranca la captura de audio y envía cada chunk PCM al modelo.
+   *
+   * **Contrato fire-and-forget:** la promesa que devuelve sólo resuelve cuando el
+   * stream de captura termina (es decir, tras `stopListening`/`interrupt`, que cierran
+   * el `inputStream`). El consumidor NO debe `await startListening()` de forma
+   * bloqueante en el flujo normal: debe invocarlo y seguir (p. ej. el hotkey la lanza
+   * y luego `stopListening` la cierra). Las excepciones del bucle de captura se
+   * encauzan por `onError`; si se llama sin manejar la promesa, conviene un
+   * `.catch(...)` para evitar rechazos sin manejar.
+   */
   async startListening(deviceId?: string): Promise<void> {
     const input = this.require('input');
     const session = this.requireSession();
@@ -170,9 +180,14 @@ export class ConversationOrchestrator {
     session.commit();
   }
 
-  /** Barge-in: cancela la respuesta en curso y detiene la reproducción. */
+  /**
+   * Barge-in: cancela la respuesta en curso y detiene la reproducción. Descarta el
+   * `assistantBuffer` acumulado para que la respuesta cancelada NO se persista cuando
+   * el modelo cierre el ciclo (`onState('idle')`).
+   */
   async interrupt(): Promise<void> {
     this.session?.interrupt();
+    this.assistantBuffer = '';
     await this.deps.output?.stop();
     this.closeOutputStream();
   }
@@ -262,7 +277,11 @@ export class ConversationOrchestrator {
     if (output === undefined) return;
     const stream = createPushPullStream();
     this.outputStream = stream;
-    this.playback = output.play(stream.read());
+    // Encadena la reproducción del turno anterior antes de la nueva: así no se
+    // solapan y, sobre todo, no quedan rechazos sin manejar al reasignar `playback`
+    // en multi-turno (un fallo de un `play` previo se observa aquí).
+    const previous = this.playback ?? Promise.resolve();
+    this.playback = previous.catch(() => undefined).then(() => output.play(stream.read()));
   }
 
   private closeOutputStream(): void {

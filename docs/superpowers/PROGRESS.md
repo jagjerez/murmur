@@ -25,7 +25,7 @@
 | 9    | Orchestrator completo (hotkey→captura→modelo→contexto→respuesta→persistir)                               | ✅ COMPLETA (en `main`) |
 | 10   | Prompt (persona cálida, construcción de contexto RAG, presupuesto de tokens)                             | ✅ COMPLETA (en `main`) |
 | 11   | UI avanzada (onboarding, ajustes, estados de error/vacío, transcripción)                                 | ✅ COMPLETA (en `main`) |
-| 12   | Privacidad (modo local, retención, borrado/exportación, memoria explícita)                               | ⬜ pendiente            |
+| 12   | Privacidad (modo local, retención, borrado/exportación, memoria explícita)                               | ✅ COMPLETA (en `main`) |
 | 13   | Whisper (TranscriptionProvider local/whisper-api como fallback)                                          | ⬜ pendiente            |
 | 14   | Wake word ("hey murmur", native, toggle en config)                                                       | ⬜ pendiente            |
 | 15   | Plugins (sistema de skills/acciones, registry, ejemplos)                                                 | ⬜ pendiente            |
@@ -150,3 +150,10 @@
   Fixes de robustez del orchestrator aplicados (interrupt limpia `assistantBuffer`, playback encadenado,
   contrato `startListening` documentado). 369 tests TS (desktop 108, core 83), cargo 11. NITs no
   bloqueantes: selector de micro inerte (sin campo en config); tests Rust de `config.rs` fuera de CI.
+- Fase 12: Privacidad (mergeada en `main`, commit `396f866`; Workflow `pass` al primer intento).
+  `@murmur/shared` `redactSensitive` ([email]/[clave]/[número], pura/idempotente); store
+  `pruneOlderThan(beforeMs)` (memoria+mensajes+sesiones, cascada embeddings) + `exportAll()`;
+  `MurmurConfig.privacy` (`localOnlyMode`/`storeTranscripts`/`redactBeforeStore`/`retentionDays`) +
+  `config set-privacy`; subcomandos `memory list/add/forget/export/prune`; el orchestrator honra los
+  flags (sin contexto RAG en local; no persiste/redacta según config). 415 tests TS (shared 13, rag
+  106, cli 52, core 89). NITs: redacción no cubre dígitos con separadores; prune más estricto que el texto.

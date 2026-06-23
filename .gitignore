@@ -11,6 +11,11 @@ build/
 target/
 apps/desktop/src-tauri/target/
 
+# Tauri icon binaries (generados desde icon.svg con `pnpm tauri icon`)
+apps/desktop/src-tauri/icons/*.png
+apps/desktop/src-tauri/icons/*.icns
+apps/desktop/src-tauri/icons/*.ico
+
 # Env & secrets (never commit)
 .env
 .env.local

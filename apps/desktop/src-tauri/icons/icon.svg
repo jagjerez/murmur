@@ -1,0 +1,13 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="murmur">
+  <title>murmur</title>
+  <!-- Cápsula cálida de fondo (terracota) -->
+  <rect x="40" y="40" width="432" height="432" rx="112" fill="#E0916B" />
+  <!-- Onda de voz centrada (barras simétricas) -->
+  <g fill="#FFF8F2">
+    <rect x="148" y="216" width="28" height="80" rx="14" />
+    <rect x="196" y="176" width="28" height="160" rx="14" />
+    <rect x="244" y="136" width="28" height="240" rx="14" />
+    <rect x="292" y="176" width="28" height="160" rx="14" />
+    <rect x="340" y="216" width="28" height="80" rx="14" />
+  </g>
+</svg>

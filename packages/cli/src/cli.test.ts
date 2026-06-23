@@ -534,4 +534,27 @@ describe('cli run', () => {
       expect(await factory().memory.count()).toBe(1);
     });
   });
+
+  describe('plugins list', () => {
+    it('lista los plugins integrados con nombre, descripción y capacidades', async () => {
+      const { stdout, exitCode } = await run(['plugins', 'list'], { config });
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('clipboard_write');
+      expect(stdout).toContain('open_app');
+      expect(stdout).toContain('current_time');
+      expect(stdout).toContain('clipboard:write');
+      expect(stdout).toContain('system:open');
+    });
+
+    it('subcomando desconocido de plugins → exitCode 1', async () => {
+      const { stdout, exitCode } = await run(['plugins', 'frobnicate'], { config });
+      expect(exitCode).toBe(1);
+      expect(stdout).toContain('desconocido');
+    });
+
+    it('help menciona plugins', async () => {
+      const { stdout } = await run(['help'], { config });
+      expect(stdout).toContain('plugins');
+    });
+  });
 });

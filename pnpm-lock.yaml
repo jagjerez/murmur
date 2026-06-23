@@ -172,6 +172,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@murmur/plugins':
+        specifier: workspace:*
+        version: link:../plugins
       '@murmur/rag':
         specifier: workspace:*
         version: link:../rag

@@ -3,6 +3,12 @@ import { randomUUID } from 'node:crypto';
 import { ConfigError } from '@murmur/shared';
 import { createSqliteStore, type SqliteStore } from '@murmur/rag';
 import {
+  clipboardWritePlugin,
+  openAppPlugin,
+  currentTimePlugin,
+  type Plugin,
+} from '@murmur/plugins';
+import {
   isTranscriptionMode,
   VALID_TRANSCRIPTION_MODES,
   normalizePhrase,
@@ -75,6 +81,7 @@ Comandos:
   memory export [ruta]           Exporta memoria+sesiones+mensajes (JSON)
   memory prune                   Aplica la retención (retentionDays)
   memory reset [--yes]           Borra la memoria local
+  plugins list                   Lista los plugins (skills) integrados
   status                         Muestra el estado de murmur
   help                           Muestra esta ayuda
 
@@ -114,6 +121,9 @@ export async function run(argv: string[], deps: CliDeps): Promise<CliResult> {
 
       case 'memory':
         return await cmdMemory(out, deps, sub, rest);
+
+      case 'plugins':
+        return cmdPlugins(out, sub);
 
       default:
         out.line(`murmur: comando desconocido "${command}". Usa "murmur help".`);
@@ -183,6 +193,35 @@ function cmdStart(out: Output, deps: CliDeps): CliResult {
     return fail(out);
   }
   out.line('murmur arrancaría el asistente… TODO(F9): arranque real del asistente.');
+  return ok(out);
+}
+
+/**
+ * Construye los plugins integrados con deps nulas/seguras: `plugins list` solo lee metadatos
+ * (nombre, descripción, capacidades), nunca ejecuta `run`, así que los efectos no se disparan.
+ */
+function builtinPlugins(): Plugin[] {
+  const noop = (): void => undefined;
+  return [
+    clipboardWritePlugin({ clipboard: { writeText: noop } }),
+    openAppPlugin({ open: noop }),
+    currentTimePlugin({ now: Date.now }),
+  ];
+}
+
+function cmdPlugins(out: Output, sub: string | undefined): CliResult {
+  if (sub !== 'list') {
+    out.line(`murmur: subcomando de plugins desconocido "${sub ?? ''}". Usa "murmur help".`);
+    return fail(out);
+  }
+
+  out.line('Plugins (skills) integrados:');
+  for (const plugin of builtinPlugins()) {
+    const caps = plugin.capabilities.length > 0 ? plugin.capabilities.join(', ') : 'ninguna';
+    out.line(`  ${plugin.name}`);
+    out.line(`    ${plugin.description}`);
+    out.line(`    Capacidades: ${caps}`);
+  }
   return ok(out);
 }
 

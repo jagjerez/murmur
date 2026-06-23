@@ -16,7 +16,7 @@
 | 0    | Fundamentos + design system + brief                                                                      | ✅ COMPLETA (en `main`) |
 | 1    | CLI real (`start`, `config`, `config set-openai-key`, `memory reset`, `status`, `~/.murmur/config.json`) | ✅ COMPLETA (en `main`) |
 | 2    | UI Tauri: cápsula real (5 estados, animaciones, dark/light, draggable, PTT/toggle)                       | ✅ COMPLETA (en `main`) |
-| 3    | Hotkey global (native Rust + Tauri global-shortcut)                                                      | ⬜ pendiente            |
+| 3    | Hotkey global (native Rust + Tauri global-shortcut)                                                      | ✅ COMPLETA (en `main`) |
 | 4    | Audio real (captura/reproducción, AudioStream PCM, enumeración de dispositivos)                          | ⬜ pendiente            |
 | 5    | OpenAI Realtime (RealtimeModelProvider sobre WebSocket, mockeado en tests)                               | ⬜ pendiente            |
 | 6    | SQLite (MemoryStore persistente, sesiones/mensajes/memoria, migraciones)                                 | ⬜ pendiente            |
@@ -51,3 +51,9 @@
   - hook). Setup Vitest+jsdom+RTL en `apps/desktop`. 76 tests verdes (33 en desktop). CSP de Tauri
     fijado (cierra TODO(F2)); catalog `vite ^6→^7`. Puerta de calidad verde verificada en el
     orquestador. Mergeada en `main` (commit `4ea00e6`).
+- Fase 3: hotkey global. `HotkeyError` en shared; parser de aceleradores en Rust
+  (`packages/native`, 11 cargo tests) y TS (`@murmur/core` `parseAccelerator`); `HotkeyManager`
+  - `createMemoryHotkeyManager`; `TauriHotkeyManager` (plugin global-shortcut, degradación segura
+    fuera de Tauri) cableado a la captura de la cápsula (inyectable). Plugin Rust + capacidad
+    `global-shortcut:default` añadidos (build nativa fuera del pipeline). 96 tests TS + 11 Rust.
+    Mergeada en `main` (commit `1c0ef24`).

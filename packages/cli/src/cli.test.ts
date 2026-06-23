@@ -282,6 +282,81 @@ describe('cli run', () => {
     });
   });
 
+  describe('config set-wakeword / display', () => {
+    it('config muestra el wake word con defaults', async () => {
+      const { stdout, exitCode } = await run(['config'], { config });
+      expect(exitCode).toBe(0);
+      expect(stdout.toLowerCase()).toContain('wake word');
+      expect(stdout).toContain('hey murmur');
+      expect(stdout).toContain('0.5');
+    });
+
+    it('status muestra el wake word', async () => {
+      const { stdout, exitCode } = await run(['status'], { config });
+      expect(exitCode).toBe(0);
+      expect(stdout.toLowerCase()).toContain('wake word');
+      expect(stdout).toContain('hey murmur');
+    });
+
+    it('set-wakeword enabled true persiste y config lo refleja', async () => {
+      const setRes = await run(['config', 'set-wakeword', 'enabled', 'true'], { config });
+      expect(setRes.exitCode).toBe(0);
+      expect(config.load().wakeWord.enabled).toBe(true);
+      const { stdout } = await run(['config'], { config });
+      expect(stdout.toLowerCase()).toContain('sí');
+    });
+
+    it('set-wakeword phrase normaliza y persiste', async () => {
+      const setRes = await run(['config', 'set-wakeword', 'phrase', '  Oye   Murmur '], { config });
+      expect(setRes.exitCode).toBe(0);
+      expect(config.load().wakeWord.phrase).toBe('oye murmur');
+    });
+
+    it('set-wakeword sensitivity persiste un número válido', async () => {
+      const setRes = await run(['config', 'set-wakeword', 'sensitivity', '0.8'], { config });
+      expect(setRes.exitCode).toBe(0);
+      expect(config.load().wakeWord.sensitivity).toBe(0.8);
+    });
+
+    it('set-wakeword enabled con valor inválido → exitCode 1', async () => {
+      const { exitCode } = await run(['config', 'set-wakeword', 'enabled', 'quizás'], { config });
+      expect(exitCode).toBe(1);
+      expect(config.load().wakeWord.enabled).toBe(false);
+    });
+
+    it('set-wakeword phrase vacía → exitCode 1 y no persiste', async () => {
+      const { exitCode } = await run(['config', 'set-wakeword', 'phrase', '   '], { config });
+      expect(exitCode).toBe(1);
+      expect(config.load().wakeWord.phrase).toBe('hey murmur');
+    });
+
+    it('set-wakeword sensitivity fuera de rango → exitCode 1 y no persiste', async () => {
+      expect((await run(['config', 'set-wakeword', 'sensitivity', '2'], { config })).exitCode).toBe(
+        1,
+      );
+      expect(
+        (await run(['config', 'set-wakeword', 'sensitivity', 'abc'], { config })).exitCode,
+      ).toBe(1);
+      expect(config.load().wakeWord.sensitivity).toBe(0.5);
+    });
+
+    it('set-wakeword campo desconocido → exitCode 1', async () => {
+      const { exitCode } = await run(['config', 'set-wakeword', 'noExiste', 'x'], { config });
+      expect(exitCode).toBe(1);
+    });
+
+    it('set-wakeword sin args → exitCode 1 con uso', async () => {
+      const { stdout, exitCode } = await run(['config', 'set-wakeword'], { config });
+      expect(exitCode).toBe(1);
+      expect(stdout.toLowerCase()).toContain('uso');
+    });
+
+    it('help menciona set-wakeword', async () => {
+      const { stdout } = await run(['help'], { config });
+      expect(stdout).toContain('set-wakeword');
+    });
+  });
+
   describe('memory gestión explícita', () => {
     // Store en memoria compartido entre llamadas a run(): simula la persistencia
     // del fichero sin tocar disco. `now` fijo para createdAt deterministas.

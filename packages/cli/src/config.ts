@@ -11,6 +11,16 @@ export type Theme = 'system' | 'dark' | 'light';
  */
 export type TranscriptionMode = 'realtime' | 'whisper-api' | 'local-whisper';
 
+/** Configuración del wake word ("hey murmur") como fuente de activación. */
+export interface WakeWordConfig {
+  /** Si `true`, la app arranca el detector de wake word junto al hotkey. */
+  enabled: boolean;
+  /** Frase de activación normalizada (minúsculas/trim/espacios colapsados). */
+  phrase: string;
+  /** Sensibilidad `0..1`: umbral de score a partir del cual se dispara. */
+  sensitivity: number;
+}
+
 /** Controles de privacidad del usuario. Todos con defaults conservadores. */
 export interface PrivacyConfig {
   /** Si `true`, el orchestrator no inyecta contexto RAG en el prompt. */
@@ -32,6 +42,8 @@ export interface MurmurConfig {
   /** Modo de transcripción a usar (default `realtime`). */
   transcription: TranscriptionMode;
   privacy: PrivacyConfig;
+  /** Activación por wake word ("hey murmur"). */
+  wakeWord: WakeWordConfig;
 }
 
 export const DEFAULT_PRIVACY: PrivacyConfig = {
@@ -41,6 +53,12 @@ export const DEFAULT_PRIVACY: PrivacyConfig = {
   retentionDays: 0,
 };
 
+export const DEFAULT_WAKE_WORD: WakeWordConfig = {
+  enabled: false,
+  phrase: 'hey murmur',
+  sensitivity: 0.5,
+};
+
 export const DEFAULT_CONFIG: Omit<MurmurConfig, 'openaiApiKey'> = {
   hotkey: 'CommandOrControl+Shift+Space',
   model: 'gpt-realtime',
@@ -48,6 +66,7 @@ export const DEFAULT_CONFIG: Omit<MurmurConfig, 'openaiApiKey'> = {
   theme: 'system',
   transcription: 'realtime',
   privacy: DEFAULT_PRIVACY,
+  wakeWord: DEFAULT_WAKE_WORD,
 };
 
 const CONFIG_FILE = 'config.json';
@@ -151,6 +170,29 @@ export class ConfigStore {
     const next = normalizePrivacy({ ...current, ...patch });
     return this.save({ privacy: next });
   }
+
+  /**
+   * Combina `patch` sobre la config de wake word actual (normalizada/validada) y la persiste.
+   * Lanza `ConfigError` si `phrase` queda vacía o `sensitivity` está fuera de `[0, 1]`.
+   */
+  setWakeWord(patch: Partial<WakeWordConfig>): MurmurConfig {
+    const current = this.load().wakeWord;
+    const merged: WakeWordConfig = { ...current, ...patch };
+
+    if (patch.phrase !== undefined && normalizePhrase(merged.phrase).length === 0) {
+      throw new ConfigError('La frase de activación no puede estar vacía.');
+    }
+    if (
+      patch.sensitivity !== undefined &&
+      (!Number.isFinite(merged.sensitivity) || merged.sensitivity < 0 || merged.sensitivity > 1)
+    ) {
+      throw new ConfigError(
+        `Sensibilidad inválida "${String(merged.sensitivity)}" (usa un número entre 0 y 1).`,
+      );
+    }
+
+    return this.save({ wakeWord: normalizeWakeWord(merged) });
+  }
 }
 
 function isNotFound(err: unknown): boolean {
@@ -187,8 +229,39 @@ function normalize(raw: Record<string, unknown>): MurmurConfig {
   if (raw.privacy !== null && typeof raw.privacy === 'object' && !Array.isArray(raw.privacy)) {
     config.privacy = normalizePrivacy(raw.privacy as Record<string, unknown>);
   }
+  if (raw.wakeWord !== null && typeof raw.wakeWord === 'object' && !Array.isArray(raw.wakeWord)) {
+    config.wakeWord = normalizeWakeWord(raw.wakeWord as Record<string, unknown>);
+  }
 
   return config;
+}
+
+/**
+ * Normaliza una frase de activación: minúsculas, sin espacios al inicio/fin y espacios
+ * internos colapsados a uno solo. Reglas idénticas a `normalize_phrase` en Rust.
+ */
+export function normalizePhrase(phrase: string): string {
+  return phrase.toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+/** Normaliza el wake word: defaults para campos ausentes/ inválidos; frase y sensibilidad saneadas. */
+function normalizeWakeWord(raw: Record<string, unknown>): WakeWordConfig {
+  const wakeWord: WakeWordConfig = { ...DEFAULT_WAKE_WORD };
+
+  if (typeof raw.enabled === 'boolean') {
+    wakeWord.enabled = raw.enabled;
+  }
+  if (typeof raw.phrase === 'string') {
+    const normalized = normalizePhrase(raw.phrase);
+    if (normalized.length > 0) {
+      wakeWord.phrase = normalized;
+    }
+  }
+  if (typeof raw.sensitivity === 'number' && Number.isFinite(raw.sensitivity)) {
+    wakeWord.sensitivity = Math.min(1, Math.max(0, raw.sensitivity));
+  }
+
+  return wakeWord;
 }
 
 /** Normaliza la privacidad: defaults para campos ausentes o con tipo inválido. */

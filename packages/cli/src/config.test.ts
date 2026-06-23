@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, statSync, writeFileSync, mkdirSync, existsSync } f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ConfigError } from '@murmur/shared';
-import { ConfigStore, DEFAULT_CONFIG, DEFAULT_PRIVACY } from './config';
+import { ConfigStore, DEFAULT_CONFIG, DEFAULT_PRIVACY, DEFAULT_WAKE_WORD } from './config';
 
 describe('ConfigStore', () => {
   let baseDir: string;
@@ -187,6 +187,94 @@ describe('ConfigStore', () => {
         'utf8',
       );
       expect(new ConfigStore(baseDir).load().transcription).toBe('realtime');
+    });
+  });
+
+  describe('wakeWord', () => {
+    it('load() devuelve los defaults del wake word', () => {
+      const store = new ConfigStore(baseDir);
+      const { wakeWord } = store.load();
+      expect(wakeWord).toEqual(DEFAULT_WAKE_WORD);
+      expect(wakeWord.enabled).toBe(false);
+      expect(wakeWord.phrase).toBe('hey murmur');
+      expect(wakeWord.sensitivity).toBe(0.5);
+    });
+
+    it('setWakeWord persiste enabled y conserva el resto', () => {
+      const store = new ConfigStore(baseDir);
+      store.setWakeWord({ enabled: true });
+      const { wakeWord } = new ConfigStore(baseDir).load();
+      expect(wakeWord.enabled).toBe(true);
+      expect(wakeWord.phrase).toBe('hey murmur');
+      expect(wakeWord.sensitivity).toBe(0.5);
+    });
+
+    it('setWakeWord normaliza la frase (minúsculas/trim/espacios)', () => {
+      const store = new ConfigStore(baseDir);
+      store.setWakeWord({ phrase: '  Hola   Murmur  ' });
+      expect(new ConfigStore(baseDir).load().wakeWord.phrase).toBe('hola murmur');
+    });
+
+    it('setWakeWord persiste sensitivity válida', () => {
+      const store = new ConfigStore(baseDir);
+      store.setWakeWord({ sensitivity: 0.8 });
+      expect(new ConfigStore(baseDir).load().wakeWord.sensitivity).toBe(0.8);
+    });
+
+    it('setWakeWord con frase vacía → ConfigError y no persiste', () => {
+      const store = new ConfigStore(baseDir);
+      expect(() => store.setWakeWord({ phrase: '   ' })).toThrow(ConfigError);
+      expect(new ConfigStore(baseDir).load().wakeWord.phrase).toBe('hey murmur');
+    });
+
+    it('setWakeWord con sensitivity fuera de [0,1] → ConfigError y no persiste', () => {
+      const store = new ConfigStore(baseDir);
+      expect(() => store.setWakeWord({ sensitivity: 1.5 })).toThrow(ConfigError);
+      expect(() => store.setWakeWord({ sensitivity: -0.1 })).toThrow(ConfigError);
+      expect(new ConfigStore(baseDir).load().wakeWord.sensitivity).toBe(0.5);
+    });
+
+    it('normaliza wakeWord parcial del JSON con defaults', () => {
+      mkdirSync(baseDir, { recursive: true });
+      writeFileSync(
+        join(baseDir, 'config.json'),
+        JSON.stringify({ wakeWord: { enabled: true } }),
+        'utf8',
+      );
+      const { wakeWord } = new ConfigStore(baseDir).load();
+      expect(wakeWord.enabled).toBe(true);
+      expect(wakeWord.phrase).toBe('hey murmur');
+      expect(wakeWord.sensitivity).toBe(0.5);
+    });
+
+    it('descarta tipos inválidos del JSON y usa defaults; sensitivity se satura a [0,1]', () => {
+      mkdirSync(baseDir, { recursive: true });
+      writeFileSync(
+        join(baseDir, 'config.json'),
+        JSON.stringify({ wakeWord: { enabled: 'sí', phrase: 42, sensitivity: 9 } }),
+        'utf8',
+      );
+      const { wakeWord } = new ConfigStore(baseDir).load();
+      expect(wakeWord.enabled).toBe(false);
+      expect(wakeWord.phrase).toBe('hey murmur');
+      expect(wakeWord.sensitivity).toBe(1);
+    });
+
+    it('normaliza la frase del JSON; frase en blanco cae a default', () => {
+      mkdirSync(baseDir, { recursive: true });
+      writeFileSync(
+        join(baseDir, 'config.json'),
+        JSON.stringify({ wakeWord: { phrase: '  Oye   Murmur ' } }),
+        'utf8',
+      );
+      expect(new ConfigStore(baseDir).load().wakeWord.phrase).toBe('oye murmur');
+
+      writeFileSync(
+        join(baseDir, 'config.json'),
+        JSON.stringify({ wakeWord: { phrase: '   ' } }),
+        'utf8',
+      );
+      expect(new ConfigStore(baseDir).load().wakeWord.phrase).toBe('hey murmur');
     });
   });
 });

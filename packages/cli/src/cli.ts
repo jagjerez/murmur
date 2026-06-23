@@ -5,9 +5,11 @@ import { createSqliteStore, type SqliteStore } from '@murmur/rag';
 import {
   isTranscriptionMode,
   VALID_TRANSCRIPTION_MODES,
+  normalizePhrase,
   type ConfigStore,
   type MurmurConfig,
   type PrivacyConfig,
+  type WakeWordConfig,
 } from './config';
 
 export const VERSION = '0.1.0';
@@ -64,6 +66,9 @@ Comandos:
   config set-privacy <campo> <valor>
                                  Cambia un flag de privacidad (localOnlyMode,
                                  storeTranscripts, redactBeforeStore, retentionDays)
+  config set-wakeword <campo> <valor>
+                                 Configura el wake word (enabled, phrase,
+                                 sensitivity)
   memory list                    Lista la memoria guardada
   memory add <texto>             Añade una memoria explícita
   memory forget <id>             Olvida (borra) un item de memoria
@@ -163,6 +168,9 @@ async function cmdStatus(out: Output, deps: CliDeps): Promise<CliResult> {
   out.line(`Voz:      ${config.voice}`);
   out.line(`Tema:     ${config.theme}`);
   out.line(`Transcripción: ${config.transcription}`);
+  out.line(
+    `Wake word: ${config.wakeWord.enabled ? 'sí' : 'no'} ("${config.wakeWord.phrase}", sensibilidad ${config.wakeWord.sensitivity})`,
+  );
   out.line(`Memoria:  ${count} ${count === 1 ? 'elemento' : 'elementos'}`);
   return ok(out);
 }
@@ -225,9 +233,69 @@ function cmdConfig(out: Output, deps: CliDeps, sub: string | undefined, rest: st
     case 'set-privacy':
       return cmdSetPrivacy(out, deps, rest);
 
+    case 'set-wakeword':
+      return cmdSetWakeWord(out, deps, rest);
+
     default:
       out.line(`murmur: subcomando de config desconocido "${sub}". Usa "murmur help".`);
       return fail(out);
+  }
+}
+
+function cmdSetWakeWord(out: Output, deps: CliDeps, rest: string[]): CliResult {
+  const [field, ...valueParts] = rest;
+  const value = valueParts.join(' ');
+  if (!field || value.length === 0) {
+    out.line('murmur: uso: murmur config set-wakeword <campo> <valor>');
+    out.line('  Campos: enabled (true/false), phrase (texto), sensitivity (0..1).');
+    return fail(out);
+  }
+
+  try {
+    switch (field) {
+      case 'enabled': {
+        const parsed = parseBool(value);
+        if (parsed === undefined) {
+          out.line(`murmur: valor inválido "${value}" para enabled (usa true/false).`);
+          return fail(out);
+        }
+        const saved = deps.config.setWakeWord({ enabled: parsed });
+        out.line(`murmur: wake word actualizado (enabled=${String(saved.wakeWord.enabled)}).`);
+        return ok(out);
+      }
+
+      case 'phrase': {
+        if (normalizePhrase(value).length === 0) {
+          out.line('murmur: la frase de activación no puede estar vacía.');
+          return fail(out);
+        }
+        const saved = deps.config.setWakeWord({ phrase: value });
+        out.line(`murmur: wake word actualizado (phrase="${saved.wakeWord.phrase}").`);
+        return ok(out);
+      }
+
+      case 'sensitivity': {
+        const num = Number(value);
+        if (!Number.isFinite(num) || num < 0 || num > 1) {
+          out.line(`murmur: valor inválido "${value}" para sensitivity (usa un número 0..1).`);
+          return fail(out);
+        }
+        const saved = deps.config.setWakeWord({ sensitivity: num });
+        out.line(`murmur: wake word actualizado (sensitivity=${saved.wakeWord.sensitivity}).`);
+        return ok(out);
+      }
+
+      default:
+        out.line(`murmur: campo de wake word desconocido "${field}".`);
+        out.line('  Campos: enabled, phrase, sensitivity.');
+        return fail(out);
+    }
+  } catch (err) {
+    if (err instanceof ConfigError) {
+      out.line(`murmur: ${err.message}`);
+      return fail(out);
+    }
+    throw err;
   }
 }
 
@@ -294,7 +362,15 @@ function showConfig(out: Output, config: MurmurConfig): CliResult {
   out.line(
     `  Retención (días):  ${config.privacy.retentionDays === 0 ? 'sin límite' : config.privacy.retentionDays}`,
   );
+  out.line('Wake word:');
+  showWakeWord(out, config.wakeWord);
   return ok(out);
+}
+
+function showWakeWord(out: Output, wakeWord: WakeWordConfig): void {
+  out.line(`  Activado:     ${wakeWord.enabled ? 'sí' : 'no'}`);
+  out.line(`  Frase:        "${wakeWord.phrase}"`);
+  out.line(`  Sensibilidad: ${wakeWord.sensitivity}`);
 }
 
 async function cmdMemory(

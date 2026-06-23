@@ -194,6 +194,9 @@ importers:
       '@murmur/audio':
         specifier: workspace:*
         version: link:../audio
+      '@murmur/rag':
+        specifier: workspace:*
+        version: link:../rag
       '@murmur/shared':
         specifier: workspace:*
         version: link:../shared

@@ -1,7 +1,24 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { AssistantState } from '@murmur/shared';
+import {
+  createMockVoiceInput,
+  createMemoryVoiceOutput,
+  type MemoryVoiceOutput,
+} from '@murmur/audio';
+import {
+  createSqliteStore,
+  type RagRetriever,
+  type SessionSummarizer,
+  type FactExtractor,
+  type MemoryItem,
+  type NewMemoryItem,
+} from '@murmur/rag';
 import { ConversationOrchestrator } from './orchestrator';
+import { createMockRealtimeProvider, type MockRealtimeProvider } from './providers/mock-realtime';
 
-describe('ConversationOrchestrator', () => {
+// --- Compat F0 ----------------------------------------------------------------
+
+describe('ConversationOrchestrator (compat F0)', () => {
   it('arranca en idle', () => {
     const orch = new ConversationOrchestrator();
     expect(orch.getState()).toBe('idle');
@@ -12,5 +29,238 @@ describe('ConversationOrchestrator', () => {
     const orch = new ConversationOrchestrator({ onStateChange });
     orch.reset();
     expect(onStateChange).toHaveBeenCalledWith('idle');
+  });
+});
+
+// --- Helpers de pipeline ------------------------------------------------------
+
+interface Harness {
+  orch: ConversationOrchestrator;
+  realtime: MockRealtimeProvider;
+  output: MemoryVoiceOutput;
+  store: ReturnType<typeof createSqliteStore>;
+  states: AssistantState[];
+  transcripts: { role: 'user' | 'assistant'; text: string }[];
+}
+
+function build(
+  inputChunks: Uint8Array[],
+  extra: {
+    retriever?: RagRetriever & { index?(item: NewMemoryItem): Promise<void> };
+    summarizer?: SessionSummarizer;
+    factExtractor?: FactExtractor;
+  } = {},
+): Harness {
+  const realtime = createMockRealtimeProvider();
+  const input = createMockVoiceInput(inputChunks);
+  const output = createMemoryVoiceOutput();
+  const store = createSqliteStore(':memory:');
+  const states: AssistantState[] = [];
+  const transcripts: { role: 'user' | 'assistant'; text: string }[] = [];
+
+  const orch = new ConversationOrchestrator({
+    realtime,
+    input,
+    output,
+    conversation: store.conversation,
+    connection: { apiKey: 'k', model: 'gpt-realtime', voice: 'verse' },
+    onStateChange: (s) => states.push(s),
+    onTranscript: (e) => transcripts.push(e),
+    ...extra,
+  });
+
+  return { orch, realtime, output, store, states, transcripts };
+}
+
+describe('ConversationOrchestrator (pipeline)', () => {
+  it('startSession crea sesión y conecta el realtime con instructions', async () => {
+    const h = build([]);
+    await h.orch.startSession();
+
+    expect(h.store.conversation.recentSessions(10)).toHaveLength(1);
+    expect(h.realtime.lastOptions?.apiKey).toBe('k');
+    expect(h.realtime.lastOptions?.model).toBe('gpt-realtime');
+    expect(h.realtime.lastOptions?.voice).toBe('verse');
+    // Sin retriever, las instrucciones son un contexto básico (definido, no vacío).
+    expect(typeof h.realtime.lastOptions?.instructions).toBe('string');
+  });
+
+  it('incluye el contexto del retriever en instructions', async () => {
+    const items: MemoryItem[] = [
+      { id: '1', type: 'long_term_fact', content: 'al usuario le gusta el té', createdAt: 1 },
+    ];
+    const retriever: RagRetriever = {
+      retrieve: () => Promise.resolve(items),
+    };
+    const h = build([], { retriever });
+    await h.orch.startSession();
+
+    expect(h.realtime.lastOptions?.instructions).toContain('al usuario le gusta el té');
+  });
+
+  it('startListening envía los chunks del input al sendAudio de la sesión', async () => {
+    const a = new Uint8Array([1, 2]);
+    const b = new Uint8Array([3, 4]);
+    const h = build([a, b]);
+    await h.orch.startSession();
+    await h.orch.startListening();
+
+    expect(h.realtime.lastSession?.sentAudio).toEqual([a, b]);
+  });
+
+  it('stopListening hace commit en la sesión', async () => {
+    const h = build([new Uint8Array([1])]);
+    await h.orch.startSession();
+    await h.orch.startListening();
+    await h.orch.stopListening();
+
+    expect(h.realtime.lastSession?.commits).toBe(1);
+  });
+
+  it('los onState del modelo conducen los estados vía onStateChange', async () => {
+    const h = build([]);
+    await h.orch.startSession();
+    h.states.length = 0; // descartamos cambios de arranque
+
+    h.realtime.emitState('listening');
+    h.realtime.emitState('thinking');
+    h.realtime.emitState('speaking');
+    h.realtime.emitResponseDone();
+
+    expect(h.states).toEqual(['listening', 'thinking', 'speaking', 'idle']);
+    expect(h.orch.getState()).toBe('idle');
+  });
+
+  it('el audio del modelo llega a la salida (bytes acumulados)', async () => {
+    const h = build([]);
+    await h.orch.startSession();
+
+    h.realtime.emitState('speaking');
+    const c1 = new Uint8Array([10, 11]);
+    const c2 = new Uint8Array([12, 13]);
+    h.realtime.emitAudio(c1);
+    h.realtime.emitAudio(c2);
+    h.realtime.emitResponseDone();
+
+    await h.orch.flush();
+
+    expect(h.output.chunks()).toEqual([c1, c2]);
+  });
+
+  it('persiste el turno: mensaje de usuario y de asistente en orden', async () => {
+    const h = build([]);
+    const session = await h.orch.startSession();
+
+    h.realtime.emitUserTranscript('hola, soy Ana');
+    h.realtime.emitState('thinking');
+    h.realtime.emitAssistantTranscript('Encantado, ');
+    h.realtime.emitAssistantTranscript('Ana.');
+    h.realtime.emitResponseDone();
+
+    await h.orch.flush();
+
+    const messages = h.store.conversation.getMessages(session.id);
+    expect(messages.map((m) => ({ role: m.role, text: m.text }))).toEqual([
+      { role: 'user', text: 'hola, soy Ana' },
+      { role: 'assistant', text: 'Encantado, Ana.' },
+    ]);
+    expect(h.transcripts).toEqual([
+      { role: 'user', text: 'hola, soy Ana' },
+      { role: 'assistant', text: 'Encantado, Ana.' },
+    ]);
+  });
+
+  it('dos turnos persisten cuatro mensajes en orden', async () => {
+    const h = build([]);
+    const session = await h.orch.startSession();
+
+    h.realtime.emitUserTranscript('uno');
+    h.realtime.emitAssistantTranscript('respuesta uno');
+    h.realtime.emitResponseDone();
+
+    h.realtime.emitUserTranscript('dos');
+    h.realtime.emitAssistantTranscript('respuesta dos');
+    h.realtime.emitResponseDone();
+
+    await h.orch.flush();
+
+    const messages = h.store.conversation.getMessages(session.id);
+    expect(messages.map((m) => m.text)).toEqual(['uno', 'respuesta uno', 'dos', 'respuesta dos']);
+  });
+
+  it('interrupt llama a session.interrupt y output.stop', async () => {
+    const h = build([]);
+    await h.orch.startSession();
+    h.realtime.emitState('speaking');
+
+    await h.orch.interrupt();
+
+    expect(h.realtime.lastSession?.interrupts).toBe(1);
+    expect(h.output.stopped).toBe(true);
+  });
+
+  it('onError lleva al estado error y propaga el error', async () => {
+    const errors: Error[] = [];
+    const realtime = createMockRealtimeProvider();
+    const store = createSqliteStore(':memory:');
+    const orch = new ConversationOrchestrator({
+      realtime,
+      input: createMockVoiceInput([]),
+      output: createMemoryVoiceOutput(),
+      conversation: store.conversation,
+      connection: { apiKey: 'k', model: 'm' },
+      onError: (e) => errors.push(e),
+    });
+    await orch.startSession();
+
+    const err = new Error('fallo del modelo');
+    realtime.emitError(err);
+
+    expect(orch.getState()).toBe('error');
+    expect(errors).toEqual([err]);
+  });
+
+  it('endSession finaliza la sesión y guarda summary + facts vía sink', async () => {
+    const indexed: NewMemoryItem[] = [];
+    const retriever: RagRetriever & { index(item: NewMemoryItem): Promise<void> } = {
+      retrieve: () => Promise.resolve([]),
+      index: (item) => {
+        indexed.push(item);
+        return Promise.resolve();
+      },
+    };
+    const summarizer: SessionSummarizer = {
+      summarize: () => Promise.resolve('resumen: el usuario se llama Ana'),
+    };
+    const factExtractor: FactExtractor = {
+      extract: () => Promise.resolve(['el usuario se llama Ana']),
+    };
+
+    const h = build([], { retriever, summarizer, factExtractor });
+    const session = await h.orch.startSession();
+
+    h.realtime.emitUserTranscript('me llamo Ana');
+    h.realtime.emitAssistantTranscript('Encantado, Ana');
+    h.realtime.emitResponseDone();
+    await h.orch.flush();
+
+    await h.orch.endSession();
+
+    const stored = h.store.conversation.getSession(session.id);
+    expect(stored?.endedAt).toBeTypeOf('number');
+    expect(h.realtime.lastSession?.closes).toBe(1);
+    // El summarizer y el factExtractor se invocaron; sus resultados van a retriever.index.
+    expect(indexed.some((i) => i.type === 'session_summary')).toBe(true);
+    expect(indexed.some((i) => i.type === 'long_term_fact')).toBe(true);
+  });
+
+  it('los métodos del pipeline exigen las deps con un error claro', async () => {
+    const orch = new ConversationOrchestrator();
+    await expect(orch.startSession()).rejects.toThrow(/realtime|conversation|dep/i);
+  });
+
+  it('startListening sin sesión lanza error claro', async () => {
+    const h = build([new Uint8Array([1])]);
+    await expect(h.orch.startListening()).rejects.toThrow(/sesión|session/i);
   });
 });

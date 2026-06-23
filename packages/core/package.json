@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@murmur/audio": "workspace:*",
+    "@murmur/rag": "workspace:*",
     "@murmur/shared": "workspace:*"
   },
   "devDependencies": {

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capacidad por defecto de murmur: permisos base de Tauri y atajos globales (Fase 3).",
+  "windows": ["*"],
+  "permissions": ["core:default", "global-shortcut:default"]
+}

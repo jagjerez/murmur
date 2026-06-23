@@ -11,8 +11,10 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@murmur/core": "workspace:*",
     "@murmur/design-system": "workspace:*",
     "@murmur/shared": "workspace:*",
+    "@tauri-apps/plugin-global-shortcut": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
   },

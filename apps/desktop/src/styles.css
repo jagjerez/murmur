@@ -1,0 +1,32 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+body {
+  font-family: var(--mur-font-ui);
+  background: var(--mur-surface);
+  color: var(--mur-text);
+  height: 100vh;
+  display: grid;
+  place-items: center;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 17px;
+  border-radius: var(--mur-radius-full);
+  background: var(--mur-glass);
+  border: 1px solid var(--mur-border);
+  box-shadow: var(--mur-shadow-glass);
+  backdrop-filter: blur(12px);
+}
+.pill .dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+.pill .label {
+  font-size: 12px;
+  color: var(--mur-text-muted);
+}

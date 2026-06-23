@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "murmur",
+  "version": "0.0.0",
+  "identifier": "app.murmur.desktop",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "murmur",
+        "width": 420,
+        "height": 120,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true
+      }
+    ],
+    "security": { "csp": null }
+  },
+  "bundle": { "active": true, "targets": "all" }
+}

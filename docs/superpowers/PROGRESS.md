@@ -113,3 +113,19 @@
   `long_term_fact`). `sink` desacopla generación de indexación (F9 inyectará `retriever.index`). 99 rag
   tests, cargo 11. Drift menor no bloqueante: `responseFormat` mencionado en el spec pero no implementado
   (no exigido; el parseo robusto no lo necesita).
+- Fase 9: Orchestrator completo (rama `phase-9`, gate verde; commits `365fc6f` mock-realtime, `f3e4959`
+  pipeline, `728463e` prettier docs). `@murmur/core`: `providers/mock-realtime.ts`
+  (`createMockRealtimeProvider`: `connect` captura options/callbacks; sesión registra
+  `sentAudio`/`commits`/`interrupts`/`closes`; helpers `emitState`/`emitAudio`/`emitUserTranscript`/
+  `emitAssistantTranscript`/`emitResponseDone`/`emitError`). `orchestrator.ts` REESCRITO:
+  `ConversationOrchestrator` con `Partial<OrchestratorDeps>` (realtime/input/output/conversation/
+  connection + retriever/summarizer/factExtractor opcionales + onStateChange/onTranscript/onError/now).
+  Compat F0 intacta (idle/reset). Pipeline: `startSession` (createSession + RAG context→instructions +
+  realtime.connect), `startListening`/`stopListening` (input.read→sendAudio; commit), salida vía
+  `createPushPullStream`→`output.play` por respuesta, persistencia de turno (user en onUserTranscript,
+  assistant acumulado en onState idle), `interrupt` (session.interrupt+output.stop), `endSession`
+  (endSession + summarizer/factExtractor→`retriever.index` + session.close), `flush()` para sincronizar
+  reproducción en tests. Añadida dep `@murmur/rag` a core (sin ciclo). GOTCHA: el orchestrator se bundlea
+  en el webview del desktop, así que NO usa `node:crypto`; usa `globalThis.crypto.randomUUID()`
+  (Web Crypto, Node>=19 y browser) — `node:crypto` rompía el `vite build` del desktop. 60 core tests
+  (15 orchestrator + 8 mock-realtime), 299 TS total, cargo 11. Sin red ni hardware en tests.

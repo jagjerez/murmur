@@ -28,7 +28,7 @@
 | 12   | Privacidad (modo local, retención, borrado/exportación, memoria explícita)                               | ✅ COMPLETA (en `main`) |
 | 13   | Whisper (TranscriptionProvider local/whisper-api como fallback)                                          | ✅ COMPLETA (en `main`) |
 | 14   | Wake word ("hey murmur", native, toggle en config)                                                       | ✅ COMPLETA (en `main`) |
-| 15   | Plugins (sistema de skills/acciones, registry, ejemplos)                                                 | ⬜ pendiente            |
+| 15   | Plugins (sistema de skills/acciones, registry, ejemplos)                                                 | ✅ COMPLETA (en `main`) |
 | 16   | Packaging (npm publish CLI, bundling Tauri por plataforma, CI, iconos, docs)                             | ⬜ pendiente            |
 
 ## Reglas de fase
@@ -171,3 +171,11 @@
   mock `triggerDetection` + null). CLI `MurmurConfig.wakeWord` (enabled/phrase/sensitivity) +
   `config set-wakeword` validado. `useMurmur` arranca el detector si `enabled` + hay key; onDetected→
   captura. 474 TS tests. App.tsx aún no inyecta un detector concreto (queda para F16/usuario).
+- Fase 15: Plugins (mergeada en `main`, commit `56cf70b`; Workflow `pass` en el **2.º intento**: el
+  implementer flakeó —solo dejó docs— y el bucle verify→fix lo recuperó implementando todo). Nuevo
+  paquete `@murmur/plugins` (entra en `pnpm -r`, 9 proyectos): `Plugin`/`PluginResult`/`JsonSchema`,
+  `createPluginRegistry({allowed})` (register/list/get/dispatch con **sandbox** de capacidades →
+  `PluginError`, validación de args, `toToolDefinitions` formato `{type:'function',…}`), plugins de
+  ejemplo `clipboardWritePlugin`/`openAppPlugin`/`currentTimePlugin` (side effects inyectados).
+  `PluginError` en `@murmur/shared`. CLI `murmur plugins list`. plugins 18 tests, cli 85. La
+  resiliencia del runner (verify detecta el flake como BLOCKER y fix lo corrige) quedó validada.

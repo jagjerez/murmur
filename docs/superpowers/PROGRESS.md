@@ -29,7 +29,11 @@
 | 13   | Whisper (TranscriptionProvider local/whisper-api como fallback)                                          | ✅ COMPLETA (en `main`) |
 | 14   | Wake word ("hey murmur", native, toggle en config)                                                       | ✅ COMPLETA (en `main`) |
 | 15   | Plugins (sistema de skills/acciones, registry, ejemplos)                                                 | ✅ COMPLETA (en `main`) |
-| 16   | Packaging (npm publish CLI, bundling Tauri por plataforma, CI, iconos, docs)                             | ⬜ pendiente            |
+| 16   | Packaging (npm publish CLI, bundling Tauri por plataforma, CI, iconos, docs)                             | ✅ COMPLETA (en `main`) |
+
+> **🎉 PROYECTO COMPLETO (2026-06-24).** Las 16 fases (0–16) están implementadas, verificadas y
+> mergeadas en `main`. Puerta de calidad final: **525 tests** (495 TS + 30 Rust), `typecheck`/`lint`/
+> `build`/`prettier` verdes, `npm pack` del CLI correcto, sin secretos. 120 commits.
 
 ## Reglas de fase
 
@@ -179,3 +183,12 @@
   ejemplo `clipboardWritePlugin`/`openAppPlugin`/`currentTimePlugin` (side effects inyectados).
   `PluginError` en `@murmur/shared`. CLI `murmur plugins list`. plugins 18 tests, cli 85. La
   resiliencia del runner (verify detecta el flake como BLOCKER y fix lo corrige) quedó validada.
+- Fase 16: Packaging (mergeada en `main`, commit `594d3cb`; Workflow `pass` en el 3.er intento: el
+  implementer flakeó —solo docs— y el bucle verify→fix lo recuperó). CLI `murmur` publicable
+  (`publishConfig.access public`, `files:["dist"]`, `prepack: tsup`, metadatos MIT; `npm pack` solo
+  `dist`+`package.json`, sin fuentes ni `.env`; binario verificado `--version 0.1.0`/`status`/`plugins list`).
+  Paquetes internos + `apps/desktop` `private:true`; solo `murmur` publica. `LICENSE` MIT.
+  `tauri.conf.json` bundle completo (identifier, productName, targets, icon[], category, copyright) +
+  `src-tauri/icons/icon.svg` (terracota; binarios vía `tauri icon`). `.github/workflows/ci.yml`
+  (puerta completa + cargo) y `release.yml` (plantilla). README + `docs/RELEASING.md`. **Verificación
+  E2E final verde**: 525 tests, sin secretos. Versión 0.1.0 coherente en cli/tauri/VERSION.

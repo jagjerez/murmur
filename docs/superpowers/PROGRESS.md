@@ -23,7 +23,7 @@
 | 7    | RAG embeddings + retrieval (EmbeddingProvider, vectores en SQLite, RagRetriever)                         | ✅ COMPLETA (en `main`) |
 | 8    | RAG summaries + facts (SessionSummarizer, FactExtractor, alimenta contexto)                              | ✅ COMPLETA (en `main`) |
 | 9    | Orchestrator completo (hotkey→captura→modelo→contexto→respuesta→persistir)                               | ✅ COMPLETA (en `main`) |
-| 10   | Prompt (persona cálida, construcción de contexto RAG, presupuesto de tokens)                             | ⬜ pendiente            |
+| 10   | Prompt (persona cálida, construcción de contexto RAG, presupuesto de tokens)                             | ✅ COMPLETA (en `main`) |
 | 11   | UI avanzada (onboarding, ajustes, estados de error/vacío, transcripción)                                 | ⬜ pendiente            |
 | 12   | Privacidad (modo local, retención, borrado/exportación, memoria explícita)                               | ⬜ pendiente            |
 | 13   | Whisper (TranscriptionProvider local/whisper-api como fallback)                                          | ⬜ pendiente            |
@@ -133,3 +133,11 @@
   NITs de robustez (seguimiento en F11, cuando el orchestrator se cablea en cli/desktop): `interrupt()`
   debería limpiar `assistantBuffer` (evitar persistir respuesta cancelada tras barge-in); encadenar la
   promesa de `playback` en multi-turno; documentar el contrato fire-and-forget de `startListening`.
+- Fase 10: Prompt (mergeada en `main`, commit `4df2467`; Workflow `pass` al primer intento +
+  confirmación del orquestador). `@murmur/core/src/prompt.ts`: `MURMUR_PERSONA`/`getPersona(locale)`
+  (cálida/íntima/breve, sin listas al hablar, idioma del usuario es/en), `estimateTokens` (~ceil(chars/4),
+  monótona), `formatContext` (orden por tipo `long_term_fact`/`explicit_user_memory`→`session_summary`→
+  `short_term` + recencia; bloque "Lo que recuerdo…"; trunca al `tokenBudget`), `buildSystemPrompt`
+  (persona nunca truncada + contexto si cabe; budget default 1500). `orchestrator.startSession` ahora
+  usa `buildSystemPrompt` (dep opcional `locale`). 80 core tests (prompt 17 + orchestrator 18). El
+  agente respetó la instrucción de no tocar el tracker. NIT: truncado voraz (intencional).

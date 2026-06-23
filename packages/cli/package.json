@@ -2,12 +2,40 @@
   "name": "murmur",
   "version": "0.1.0",
   "type": "module",
+  "description": "Asistente de voz con IA a nivel de sistema operativo: atajo de teclado, respuesta por voz de baja latencia y memoria contextual local (RAG).",
+  "keywords": [
+    "voice",
+    "assistant",
+    "ai",
+    "speech",
+    "realtime",
+    "rag",
+    "cli",
+    "murmur"
+  ],
+  "license": "MIT",
+  "author": "murmur contributors",
+  "homepage": "https://github.com/murmur/murmur#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/murmur/murmur.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/murmur/murmur/issues"
+  },
   "bin": {
     "murmur": "./dist/index.js"
   },
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -17,7 +45,9 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepack": "tsup",
+    "prepublishOnly": "tsup"
   },
   "dependencies": {
     "@murmur/plugins": "workspace:*",

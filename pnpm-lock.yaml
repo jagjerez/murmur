@@ -48,6 +48,22 @@ importers:
         specifier: 'catalog:'
         version: 8.61.1(eslint@9.39.4)(typescript@5.9.3)
 
+  packages/core:
+    dependencies:
+      '@murmur/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      tsup:
+        specifier: 'catalog:'
+        version: 8.5.1(postcss@8.5.15)(typescript@5.9.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.6
+
   packages/design-system:
     dependencies:
       '@murmur/shared':

@@ -27,11 +27,11 @@ vitest); side effects inyectados; NO toques `PROGRESS.md`.
 `src/registry.ts`, `src/index.ts` (+ tests).
 
 - [ ] `package.json` (`@murmur/plugins`, exports→src, build tsup, test vitest, dep `@murmur/shared`),
-  `tsconfig.json` (extiende la base), `tsup.config.ts`. `pnpm install`.
+      `tsconfig.json` (extiende la base), `tsup.config.ts`. `pnpm install`.
 - [ ] `plugin.ts`: `Plugin`, `PluginContext`, `PluginResult`, `JsonSchema`. `registry.ts`:
-  `createPluginRegistry({ allowed })` con `register/list/get/dispatch/toToolDefinitions`.
+      `createPluginRegistry({ allowed })` con `register/list/get/dispatch/toToolDefinitions`.
 - [ ] Tests (fallan→pasan): register/list/get; dispatch ejecuta permitido y devuelve `PluginResult`;
-  capacidad no permitida → `PluginError`; args inválidos → error; `toToolDefinitions` formato correcto.
+      capacidad no permitida → `PluginError`; args inválidos → error; `toToolDefinitions` formato correcto.
 - [ ] Commit: `feat(plugins): paquete @murmur/plugins con registry y sandbox`.
 
 ## Task 3: Plugins de ejemplo
@@ -39,9 +39,9 @@ vitest); side effects inyectados; NO toques `PROGRESS.md`.
 **Files:** `packages/plugins/src/plugins/{clipboard,open-app,time}.ts` (+ tests), export en `index.ts`.
 
 - [ ] `clipboardWritePlugin({ clipboard })` (cap `clipboard:write`), `openAppPlugin({ open })`
-  (cap `system:open`), `currentTimePlugin({ now })` (cap `[]`). Cada uno con schema y `run`.
+      (cap `system:open`), `currentTimePlugin({ now })` (cap `[]`). Cada uno con schema y `run`.
 - [ ] Tests (fallan→pasan): clipboard llama `writeText` con el texto; open-app llama `open` con la url;
-  time devuelve la hora del `now` inyectado; resultados `ok:true`; errores del efecto → `ok:false`/`PluginError`.
+      time devuelve la hora del `now` inyectado; resultados `ok:true`; errores del efecto → `ok:false`/`PluginError`.
 - [ ] Commit: `feat(plugins): plugins de ejemplo (clipboard, open-app, time)`.
 
 ## Task 4: `murmur plugins list` (`@murmur/cli`)
@@ -49,7 +49,7 @@ vitest); side effects inyectados; NO toques `PROGRESS.md`.
 **Files:** `packages/cli/src/cli.ts`, `packages/cli/package.json` (dep `@murmur/plugins`) (+ tests).
 
 - [ ] `plugins list`: construye los plugins integrados con deps nulas/seguras y lista nombre +
-  descripción + capacidades. Añadir a `help`.
+      descripción + capacidades. Añadir a `help`.
 - [ ] Tests (fallan→pasan): `plugins list` muestra los nombres de los plugins integrados.
 - [ ] Commit: `feat(cli): comando plugins list`.
 

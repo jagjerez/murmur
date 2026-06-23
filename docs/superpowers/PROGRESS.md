@@ -26,7 +26,7 @@
 | 10   | Prompt (persona cálida, construcción de contexto RAG, presupuesto de tokens)                             | ✅ COMPLETA (en `main`) |
 | 11   | UI avanzada (onboarding, ajustes, estados de error/vacío, transcripción)                                 | ✅ COMPLETA (en `main`) |
 | 12   | Privacidad (modo local, retención, borrado/exportación, memoria explícita)                               | ✅ COMPLETA (en `main`) |
-| 13   | Whisper (TranscriptionProvider local/whisper-api como fallback)                                          | ⬜ pendiente            |
+| 13   | Whisper (TranscriptionProvider local/whisper-api como fallback)                                          | ✅ COMPLETA (en `main`) |
 | 14   | Wake word ("hey murmur", native, toggle en config)                                                       | ⬜ pendiente            |
 | 15   | Plugins (sistema de skills/acciones, registry, ejemplos)                                                 | ⬜ pendiente            |
 | 16   | Packaging (npm publish CLI, bundling Tauri por plataforma, CI, iconos, docs)                             | ⬜ pendiente            |
@@ -157,3 +157,10 @@
   `config set-privacy`; subcomandos `memory list/add/forget/export/prune`; el orchestrator honra los
   flags (sin contexto RAG en local; no persiste/redacta según config). 415 tests TS (shared 13, rag
   106, cli 52, core 89). NITs: redacción no cubre dígitos con separadores; prune más estricto que el texto.
+- Fase 13: Whisper (mergeada en `main`, commit `b6f3fcd`; Workflow `pass` al primer intento, sin
+  issues). `@murmur/core/src/providers/whisper.ts`: `createOpenAIWhisperProvider` (POST
+  `/v1/audio/transcriptions`, FormData file+model, `fetchFn` inyectable, error→`ModelError`, key no
+  logueada), `createLocalWhisperProvider` (`run` inyectable; binario no empaquetado), `createMock…`,
+  `selectTranscriptionProvider`. CLI: `MurmurConfig.transcription` (default `realtime`) +
+  `config set-transcription` validado. 443 tests TS (core 107, cli 62). Nota: `TranscriptionMode`
+  duplicado en cli/config.ts (cli no depende de core) — sincronizar si divergen.

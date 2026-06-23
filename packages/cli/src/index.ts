@@ -1,4 +1,9 @@
 #!/usr/bin/env node
 import { run } from './cli';
+import { ConfigStore } from './config';
 
-console.log(run(process.argv.slice(2)));
+const { stdout, exitCode } = await run(process.argv.slice(2), { config: new ConfigStore() });
+if (stdout) {
+  console.log(stdout);
+}
+process.exit(exitCode);

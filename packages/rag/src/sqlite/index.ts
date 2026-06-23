@@ -52,3 +52,9 @@ export { openDatabase, migrate, SCHEMA_VERSION, type Database } from './db';
 export { SqliteMemoryStore } from './memory-store';
 export { ConversationStore, type NewMessage } from './conversation-store';
 export { SqliteEmbeddingStore, type StoredEmbedding } from './embeddings-store';
+export {
+  createSqliteRagRetriever,
+  type SqliteRagRetriever,
+  type SqliteRagRetrieverOptions,
+  type ScoredMemoryItem,
+} from './retriever';

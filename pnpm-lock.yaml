@@ -101,6 +101,9 @@ importers:
       '@murmur/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
+      '@murmur/rag':
+        specifier: workspace:*
+        version: link:../../packages/rag
       '@murmur/shared':
         specifier: workspace:*
         version: link:../../packages/shared

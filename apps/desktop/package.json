@@ -14,6 +14,7 @@
     "@murmur/audio": "workspace:*",
     "@murmur/core": "workspace:*",
     "@murmur/design-system": "workspace:*",
+    "@murmur/rag": "workspace:*",
     "@murmur/shared": "workspace:*",
     "@tauri-apps/plugin-global-shortcut": "catalog:",
     "react": "catalog:",

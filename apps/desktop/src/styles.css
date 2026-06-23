@@ -156,90 +156,6 @@ body {
   }
 }
 
-/* ── Panel de desarrollo (provisional, F11) ────────────────────────────── */
-.dev-panel {
-  position: fixed;
-  top: var(--mur-anchor-gap);
-  left: var(--mur-anchor-gap);
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px 16px;
-  max-width: 320px;
-  border-radius: var(--mur-radius-lg);
-  background: var(--mur-surface-raised);
-  border: 1px solid var(--mur-border);
-  box-shadow: var(--mur-shadow-glass);
-  font-size: 12px;
-}
-
-.dev-panel h2 {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--mur-text-muted);
-}
-
-.dev-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.dev-row > span,
-.dev-row > label {
-  color: var(--mur-text-muted);
-  font-family: var(--mur-font-mono);
-}
-
-.dev-row .muted {
-  font-style: italic;
-  opacity: 0.8;
-}
-
-.dev-row select {
-  padding: 5px 10px;
-  border-radius: var(--mur-radius-sm, 8px);
-  border: 1px solid var(--mur-border);
-  background: var(--mur-glass);
-  color: var(--mur-text);
-  font: inherit;
-  cursor: pointer;
-}
-
-.dev-row select:focus-visible {
-  outline: 2px solid var(--mur-accent-400);
-  outline-offset: 2px;
-}
-
-.dev-row .group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.dev-panel button {
-  padding: 5px 10px;
-  border-radius: var(--mur-radius-sm, 8px);
-  border: 1px solid var(--mur-border);
-  background: var(--mur-glass);
-  color: var(--mur-text);
-  font: inherit;
-  cursor: pointer;
-}
-
-.dev-panel button[aria-pressed='true'] {
-  border-color: var(--mur-accent-400);
-  color: var(--mur-accent-400);
-}
-
-.dev-panel button:focus-visible {
-  outline: 2px solid var(--mur-accent-400);
-  outline-offset: 2px;
-}
-
 /* ── Superficies de UI avanzada (F11) ──────────────────────────────────── */
 .onboarding,
 .settings,
@@ -422,4 +338,38 @@ body {
 .muted {
   color: var(--mur-text-muted);
   font-style: italic;
+}
+
+/* ── Barra de herramientas del shell (F11) ─────────────────────────────── */
+.app-toolbar {
+  position: fixed;
+  top: var(--mur-anchor-gap);
+  right: var(--mur-anchor-gap);
+  z-index: 50;
+  display: flex;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.app-toolbar button {
+  padding: 6px 12px;
+  border-radius: var(--mur-radius-full);
+  border: 1px solid var(--mur-border);
+  background: var(--mur-glass);
+  color: var(--mur-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app-toolbar button[aria-pressed='true'] {
+  border-color: var(--mur-accent-400);
+  color: var(--mur-accent-400);
+}
+
+.app-toolbar button:focus-visible {
+  outline: 2px solid var(--mur-accent-400);
+  outline-offset: 2px;
 }

@@ -1,0 +1,8 @@
+[package]
+name = "murmur-native"
+version = "0.0.0"
+edition = "2021"
+description = "Helpers nativos de murmur (hotkeys, audio nativo). Esqueleto para Fase 3+."
+
+[lib]
+crate-type = ["rlib"]

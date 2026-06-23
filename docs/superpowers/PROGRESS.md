@@ -24,7 +24,7 @@
 | 8    | RAG summaries + facts (SessionSummarizer, FactExtractor, alimenta contexto)                              | ✅ COMPLETA (en `main`) |
 | 9    | Orchestrator completo (hotkey→captura→modelo→contexto→respuesta→persistir)                               | ✅ COMPLETA (en `main`) |
 | 10   | Prompt (persona cálida, construcción de contexto RAG, presupuesto de tokens)                             | ✅ COMPLETA (en `main`) |
-| 11   | UI avanzada (onboarding, ajustes, estados de error/vacío, transcripción)                                 | ⬜ pendiente            |
+| 11   | UI avanzada (onboarding, ajustes, estados de error/vacío, transcripción)                                 | ✅ COMPLETA (en `main`) |
 | 12   | Privacidad (modo local, retención, borrado/exportación, memoria explícita)                               | ⬜ pendiente            |
 | 13   | Whisper (TranscriptionProvider local/whisper-api como fallback)                                          | ⬜ pendiente            |
 | 14   | Wake word ("hey murmur", native, toggle en config)                                                       | ⬜ pendiente            |
@@ -141,3 +141,12 @@
   (persona nunca truncada + contexto si cabe; budget default 1500). `orchestrator.startSession` ahora
   usa `buildSystemPrompt` (dep opcional `locale`). 80 core tests (prompt 17 + orchestrator 18). El
   agente respetó la instrucción de no tocar el tracker. NIT: truncado voraz (intencional).
+- Fase 11: UI avanzada (mergeada en `main`, commit `5f64b28`; Workflow `pass` al primer intento +
+  confirmación del orquestador). `apps/desktop`: `ConfigClient` (mock + Tauri, key nunca expuesta),
+  `Onboarding`/`Settings`/`ErrorState`/`Transcript` (RTL + accesibilidad real, `:focus-visible`,
+  `role=alert`/`aria-live`), `use-murmur.ts` + `App.tsx` shell (sin key→onboarding; con key→cápsula+
+  ajustes; hotkey dispara captura; cápsula refleja `onStateChange`). Comandos Rust `config.rs`
+  (`get_config`/`set_config`/`set_openai_key`, con tests cargo internos fuera del pipeline nativo).
+  Fixes de robustez del orchestrator aplicados (interrupt limpia `assistantBuffer`, playback encadenado,
+  contrato `startListening` documentado). 369 tests TS (desktop 108, core 83), cargo 11. NITs no
+  bloqueantes: selector de micro inerte (sin campo en config); tests Rust de `config.rs` fuera de CI.

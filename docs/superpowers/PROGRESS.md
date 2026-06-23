@@ -14,7 +14,7 @@
 | Fase | Tema                                                                                                     | Estado                  |
 | ---- | -------------------------------------------------------------------------------------------------------- | ----------------------- |
 | 0    | Fundamentos + design system + brief                                                                      | ✅ COMPLETA (en `main`) |
-| 1    | CLI real (`start`, `config`, `config set-openai-key`, `memory reset`, `status`, `~/.murmur/config.json`) | ⬜ pendiente            |
+| 1    | CLI real (`start`, `config`, `config set-openai-key`, `memory reset`, `status`, `~/.murmur/config.json`) | ✅ COMPLETA (en `main`) |
 | 2    | UI Tauri: cápsula real (5 estados, animaciones, dark/light, draggable, PTT/toggle)                       | ⬜ pendiente            |
 | 3    | Hotkey global (native Rust + Tauri global-shortcut)                                                      | ⬜ pendiente            |
 | 4    | Audio real (captura/reproducción, AudioStream PCM, enumeración de dispositivos)                          | ⬜ pendiente            |
@@ -44,3 +44,6 @@
 ## Bitácora
 
 - Fase 0: completada y mergeada en `main` (commit `1dc1aae`).
+- Fase 1: CLI real + `ConfigStore` (`~/.murmur/config.json`, `MURMUR_HOME`, perms 0600, key
+  redactada). 43 tests verdes (30 en `murmur`). Review independiente: PASS. Mergeada en `main`
+  (commit `1dea78f`).

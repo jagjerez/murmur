@@ -16,14 +16,14 @@ usaba un contexto básico). Todo puro y testeable.
 
 ## 2. Decisiones confirmadas
 
-| Tema | Decisión |
-| ---- | -------- |
-| Ubicación | `@murmur/core/src/prompt.ts` (lo consume el orchestrator). Usa `MemoryItem` de `@murmur/rag` (core ya depende de rag). |
-| Persona | `MURMUR_PERSONA`: íntima, humana, cálida, cercana; **respuestas habladas breves** y naturales; no divaga; reconoce lo que recuerda con naturalidad; tono conversacional; evita listas/markdown al hablar; responde en el idioma del usuario (es/en base). Texto en español por defecto, parametrizable por `locale`. |
-| Estimación de tokens | `estimateTokens(text)` heurística (~`ceil(chars/4)`), monótona. Suficiente para presupuestar sin dependencias de tokenizer. |
-| Formato de contexto | `formatContext(items, { tokenBudget })`: ordena por relevancia/tipo/recencia (`long_term_fact` y `explicit_user_memory` priorizados, luego `session_summary`, luego `short_term`), formatea como un bloque "Lo que recuerdo…" y **trunca al presupuesto** (descarta primero lo menos relevante). Sin items → bloque vacío. |
-| Construcción | `buildSystemPrompt({ context, persona?, locale?, tokenBudget? })` → string = persona + (bloque de contexto si cabe). La **persona nunca se trunca**; el presupuesto se aplica solo al contexto. `tokenBudget` por defecto razonable (p. ej. 1500). |
-| Cableado | El orchestrator `startSession` usa `buildSystemPrompt` con los items recuperados por el `retriever` como `instructions`. |
+| Tema                 | Decisión                                                                                                                                                                                                                                                                                                                   |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ubicación            | `@murmur/core/src/prompt.ts` (lo consume el orchestrator). Usa `MemoryItem` de `@murmur/rag` (core ya depende de rag).                                                                                                                                                                                                     |
+| Persona              | `MURMUR_PERSONA`: íntima, humana, cálida, cercana; **respuestas habladas breves** y naturales; no divaga; reconoce lo que recuerda con naturalidad; tono conversacional; evita listas/markdown al hablar; responde en el idioma del usuario (es/en base). Texto en español por defecto, parametrizable por `locale`.       |
+| Estimación de tokens | `estimateTokens(text)` heurística (~`ceil(chars/4)`), monótona. Suficiente para presupuestar sin dependencias de tokenizer.                                                                                                                                                                                                |
+| Formato de contexto  | `formatContext(items, { tokenBudget })`: ordena por relevancia/tipo/recencia (`long_term_fact` y `explicit_user_memory` priorizados, luego `session_summary`, luego `short_term`), formatea como un bloque "Lo que recuerdo…" y **trunca al presupuesto** (descarta primero lo menos relevante). Sin items → bloque vacío. |
+| Construcción         | `buildSystemPrompt({ context, persona?, locale?, tokenBudget? })` → string = persona + (bloque de contexto si cabe). La **persona nunca se trunca**; el presupuesto se aplica solo al contexto. `tokenBudget` por defecto razonable (p. ej. 1500).                                                                         |
+| Cableado             | El orchestrator `startSession` usa `buildSystemPrompt` con los items recuperados por el `retriever` como `instructions`.                                                                                                                                                                                                   |
 
 ## 3. Entregables
 

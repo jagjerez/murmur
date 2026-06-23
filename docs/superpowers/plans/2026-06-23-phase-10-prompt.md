@@ -30,11 +30,11 @@ export function buildSystemPrompt(opts: {
 ```
 
 - [ ] Tests (fallan→pasan): `estimateTokens('')===0`, monótona, ~chars/4; `buildSystemPrompt` con
-  persona+contexto contiene marcadores de persona (calidez/brevedad) y el bloque "recuerdo"; contexto
-  vacío → solo persona; `locale:'en'` cambia el idioma base; presupuesto recorta el contexto (no la
-  persona) y descarta primero lo menos relevante; `formatContext` ordena por tipo/relevancia.
+      persona+contexto contiene marcadores de persona (calidez/brevedad) y el bloque "recuerdo"; contexto
+      vacío → solo persona; `locale:'en'` cambia el idioma base; presupuesto recorta el contexto (no la
+      persona) y descarta primero lo menos relevante; `formatContext` ordena por tipo/relevancia.
 - [ ] Implementar `prompt.ts` (persona en es/en; orden `long_term_fact`/`explicit_user_memory` →
-  `session_summary` → `short_term`; truncado por presupuesto contando `estimateTokens`).
+      `session_summary` → `short_term`; truncado por presupuesto contando `estimateTokens`).
 - [ ] Export en `index.ts`. Commit: `feat(core): system prompt con persona, contexto y presupuesto`.
 
 ## Task 2: Cableado en el orchestrator
@@ -42,9 +42,9 @@ export function buildSystemPrompt(opts: {
 **Files:** `packages/core/src/orchestrator.ts`, `packages/core/src/orchestrator.test.ts`.
 
 - [ ] `startSession`: construir `instructions` con `buildSystemPrompt({ context: retrievedItems, locale? })`
-  en lugar del contexto básico de F9. Mantener todo lo demás (tests F9 verdes).
+      en lugar del contexto básico de F9. Mantener todo lo demás (tests F9 verdes).
 - [ ] Test: `startSession` con un `retriever` mock que devuelve items → las `options` del
-  `createMockRealtimeProvider` tienen `instructions` que contiene la persona y el contexto.
+      `createMockRealtimeProvider` tienen `instructions` que contiene la persona y el contexto.
 - [ ] `pnpm --filter @murmur/core test/typecheck/build` verde. Commit: `feat(core): el orchestrator usa buildSystemPrompt`.
 
 ## Task 3: Verificación de fase

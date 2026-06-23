@@ -1,0 +1,97 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, rmSync, statSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { ConfigError } from '@murmur/shared';
+import { ConfigStore, DEFAULT_CONFIG } from './config';
+
+describe('ConfigStore', () => {
+  let baseDir: string;
+
+  beforeEach(() => {
+    baseDir = mkdtempSync(join(tmpdir(), 'murmur-'));
+  });
+
+  afterEach(() => {
+    rmSync(baseDir, { recursive: true, force: true });
+  });
+
+  it('load() devuelve defaults cuando no existe el archivo', () => {
+    const store = new ConfigStore(baseDir);
+    const config = store.load();
+    expect(config.hotkey).toBe(DEFAULT_CONFIG.hotkey);
+    expect(config.model).toBe(DEFAULT_CONFIG.model);
+    expect(config.voice).toBe(DEFAULT_CONFIG.voice);
+    expect(config.theme).toBe(DEFAULT_CONFIG.theme);
+    expect(config.openaiApiKey).toBeUndefined();
+  });
+
+  it('expone baseDir(), path() y dataPath()', () => {
+    const store = new ConfigStore(baseDir);
+    expect(store.baseDir()).toBe(baseDir);
+    expect(store.path()).toBe(join(baseDir, 'config.json'));
+    expect(store.dataPath('memory.db')).toBe(join(baseDir, 'memory.db'));
+  });
+
+  it('roundtrip: save() persiste y load() lo recupera', () => {
+    const store = new ConfigStore(baseDir);
+    store.save({ hotkey: 'Ctrl+Alt+M', model: 'gpt-otro' });
+    const reloaded = new ConfigStore(baseDir).load();
+    expect(reloaded.hotkey).toBe('Ctrl+Alt+M');
+    expect(reloaded.model).toBe('gpt-otro');
+    // los no tocados conservan defaults
+    expect(reloaded.voice).toBe(DEFAULT_CONFIG.voice);
+  });
+
+  it('save() crea el directorio si falta y devuelve la config combinada', () => {
+    const nested = join(baseDir, 'no', 'existe');
+    const store = new ConfigStore(nested);
+    const merged = store.save({ theme: 'dark' });
+    expect(existsSync(store.path())).toBe(true);
+    expect(merged.theme).toBe('dark');
+    expect(merged.hotkey).toBe(DEFAULT_CONFIG.hotkey);
+  });
+
+  it('el archivo escrito tiene permisos 0600', () => {
+    const store = new ConfigStore(baseDir);
+    store.save({ model: 'gpt-realtime' });
+    const mode = statSync(store.path()).mode & 0o777;
+    expect(mode).toBe(0o600);
+  });
+
+  it('chmod a 0600 incluso si el archivo ya existía con otros permisos', () => {
+    mkdirSync(baseDir, { recursive: true });
+    const file = join(baseDir, 'config.json');
+    writeFileSync(file, '{}', { mode: 0o644 });
+    const store = new ConfigStore(baseDir);
+    store.save({ model: 'gpt-realtime' });
+    const mode = statSync(file).mode & 0o777;
+    expect(mode).toBe(0o600);
+  });
+
+  it('setOpenAiKey() guarda la key', () => {
+    const store = new ConfigStore(baseDir);
+    store.setOpenAiKey('sk-test-ABCD1234');
+    expect(new ConfigStore(baseDir).load().openaiApiKey).toBe('sk-test-ABCD1234');
+  });
+
+  it('JSON malformado → ConfigError', () => {
+    mkdirSync(baseDir, { recursive: true });
+    writeFileSync(join(baseDir, 'config.json'), '{', 'utf8');
+    const store = new ConfigStore(baseDir);
+    expect(() => store.load()).toThrow(ConfigError);
+  });
+
+  it('ignora campos desconocidos con tolerancia', () => {
+    mkdirSync(baseDir, { recursive: true });
+    writeFileSync(
+      join(baseDir, 'config.json'),
+      JSON.stringify({ hotkey: 'Ctrl+X', campoRaro: 123 }),
+      'utf8',
+    );
+    const store = new ConfigStore(baseDir);
+    const config = store.load();
+    expect(config.hotkey).toBe('Ctrl+X');
+    expect((config as unknown as Record<string, unknown>).campoRaro).toBeUndefined();
+  });
+});

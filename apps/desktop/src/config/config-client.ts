@@ -14,6 +14,13 @@
 
 export type ThemePref = 'dark' | 'light' | 'system';
 
+/** Vista del wake word en el render (sin secretos): activación por frase de voz. */
+export interface WakeWordView {
+  enabled: boolean;
+  phrase: string;
+  sensitivity: number;
+}
+
 /** Vista de configuración segura para el render (sin la API key en claro). */
 export interface ConfigView {
   /** ¿Hay una API key guardada? */
@@ -24,6 +31,8 @@ export interface ConfigView {
   voice: string;
   model: string;
   theme: ThemePref;
+  /** Config del wake word ("hey murmur"). */
+  wakeWord: WakeWordView;
 }
 
 export interface ConfigClient {
@@ -49,6 +58,7 @@ export interface ConfigInitial {
   voice?: string;
   model?: string;
   theme?: ThemePref;
+  wakeWord?: Partial<WakeWordView>;
 }
 
 /** Defaults coherentes con el resto de la app (hotkey por defecto, voz/modelo MVP). */
@@ -57,6 +67,7 @@ export const CONFIG_DEFAULTS = {
   voice: 'verse',
   model: 'gpt-realtime',
   theme: 'system' as ThemePref,
+  wakeWord: { enabled: false, phrase: 'hey murmur', sensitivity: 0.5 } as WakeWordView,
 } as const;
 
 /**
@@ -78,6 +89,7 @@ interface ConfigState {
   voice: string;
   model: string;
   theme: ThemePref;
+  wakeWord: WakeWordView;
 }
 
 function viewOf(state: ConfigState): ConfigView {
@@ -89,6 +101,7 @@ function viewOf(state: ConfigState): ConfigView {
     voice: state.voice,
     model: state.model,
     theme: state.theme,
+    wakeWord: { ...state.wakeWord },
   };
 }
 
@@ -100,6 +113,7 @@ export function createMockConfigClient(initial: ConfigInitial = {}): ConfigClien
     voice: initial.voice ?? CONFIG_DEFAULTS.voice,
     model: initial.model ?? CONFIG_DEFAULTS.model,
     theme: initial.theme ?? CONFIG_DEFAULTS.theme,
+    wakeWord: { ...CONFIG_DEFAULTS.wakeWord, ...initial.wakeWord },
   };
 
   return {
@@ -144,10 +158,30 @@ interface RustConfigView {
   voice: string;
   model: string;
   theme: string;
+  wake_word?: {
+    enabled?: boolean;
+    phrase?: string;
+    sensitivity?: number;
+  } | null;
 }
 
 function themeOf(value: string): ThemePref {
   return value === 'dark' || value === 'light' ? value : 'system';
+}
+
+/** Mapea el wake word del backend a la vista, con defaults si falta o llega parcial. */
+function wakeWordOf(raw: RustConfigView['wake_word']): WakeWordView {
+  return {
+    enabled: typeof raw?.enabled === 'boolean' ? raw.enabled : CONFIG_DEFAULTS.wakeWord.enabled,
+    phrase:
+      typeof raw?.phrase === 'string' && raw.phrase.length > 0
+        ? raw.phrase
+        : CONFIG_DEFAULTS.wakeWord.phrase,
+    sensitivity:
+      typeof raw?.sensitivity === 'number' && Number.isFinite(raw.sensitivity)
+        ? raw.sensitivity
+        : CONFIG_DEFAULTS.wakeWord.sensitivity,
+  };
 }
 
 /**
@@ -181,6 +215,7 @@ export function createTauriConfigClient(): ConfigClient {
         voice: raw.voice,
         model: raw.model,
         theme: themeOf(raw.theme),
+        wakeWord: wakeWordOf(raw.wake_word),
       };
     },
     async setOpenAiKey(key) {

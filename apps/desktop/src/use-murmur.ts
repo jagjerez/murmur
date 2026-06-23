@@ -4,6 +4,7 @@ import {
   ConversationOrchestrator,
   type HotkeyManager,
   type RealtimeModelProvider,
+  type WakeWordDetector,
 } from '@murmur/core';
 import type { ConversationStore } from '@murmur/rag';
 import type { VoiceInputProvider, VoiceOutputProvider } from '@murmur/audio';
@@ -19,6 +20,11 @@ export interface MurmurDeps {
   input: VoiceInputProvider;
   output: VoiceOutputProvider;
   hotkey: HotkeyManager;
+  /**
+   * Detector de wake word inyectable. Si se proporciona y `config.wakeWord.enabled`, se arranca
+   * y su detección dispara la captura (igual que el hotkey). Opcional: si falta, no hay wake word.
+   */
+  wakeWord?: WakeWordDetector;
   /** Almacén de conversación. Por defecto en memoria (webview). */
   conversation?: ConversationStore;
   /** ID del dispositivo de entrada a usar (micrófono seleccionado). */
@@ -128,6 +134,27 @@ export function useMurmur(deps: MurmurDeps): MurmurController {
       void hotkey.unregisterAll();
     };
   }, [deps.config, deps.hotkey]);
+
+  // Arranca el wake word si está habilitado en config y hay detector inyectado. La detección
+  // dispara la captura igual que el hotkey. Requiere API key (como el hotkey). Limpieza con stop.
+  useEffect(() => {
+    const detector = deps.wakeWord;
+    if (detector === undefined) return;
+    let cancelled = false;
+    void (async () => {
+      const apiKey = await deps.config.readApiKey();
+      if (cancelled || !apiKey) return;
+      const view = await deps.config.get();
+      if (cancelled || !view.wakeWord.enabled) return;
+      await detector.start(() => {
+        if (!cancelled) void startRef.current();
+      });
+    })();
+    return () => {
+      cancelled = true;
+      void detector.stop();
+    };
+  }, [deps.config, deps.wakeWord]);
 
   return { capsuleState, connection, transcript, startCapture, stopCapture };
 }

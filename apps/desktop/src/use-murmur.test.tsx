@@ -1,6 +1,10 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { renderHook, act, cleanup, waitFor } from '@testing-library/react';
-import { createMockRealtimeProvider, createMemoryHotkeyManager } from '@murmur/core';
+import {
+  createMockRealtimeProvider,
+  createMemoryHotkeyManager,
+  createMockWakeWordDetector,
+} from '@murmur/core';
 import { createMockVoiceInput, createMemoryVoiceOutput } from '@murmur/audio';
 import { createMockConfigClient } from './config/config-client';
 import { useMurmur, type MurmurDeps } from './use-murmur';
@@ -147,5 +151,57 @@ describe('useMurmur', () => {
     // Damos margen al efecto async; no debe registrar nada.
     await new Promise((r) => setTimeout(r, 20));
     expect(hotkey.registered()).toHaveLength(0);
+  });
+
+  describe('wake word', () => {
+    it('con wakeWord.enabled, una detección dispara la captura (estado listening)', async () => {
+      const realtime = createMockRealtimeProvider();
+      const wakeWord = createMockWakeWordDetector();
+      const config = createMockConfigClient({
+        apiKey: 'sk-test-key-abcdef',
+        wakeWord: { enabled: true },
+      });
+      const { result } = renderHook(() => useMurmur(makeDeps({ realtime, wakeWord, config })));
+
+      await waitFor(() => expect(wakeWord.enabled).toBe(true));
+
+      await act(async () => {
+        wakeWord.triggerDetection();
+      });
+
+      await waitFor(() => expect(result.current.capsuleState).toBe('listening'));
+      await waitFor(() => expect(result.current.connection).toBe('connected'));
+    });
+
+    it('con wakeWord deshabilitado no arranca el detector', async () => {
+      const wakeWord = createMockWakeWordDetector();
+      const config = createMockConfigClient({
+        apiKey: 'sk-test-key-abcdef',
+        wakeWord: { enabled: false },
+      });
+      renderHook(() => useMurmur(makeDeps({ wakeWord, config })));
+      await new Promise((r) => setTimeout(r, 20));
+      expect(wakeWord.enabled).toBe(false);
+    });
+
+    it('sin API key no arranca el detector aunque esté habilitado', async () => {
+      const wakeWord = createMockWakeWordDetector();
+      const config = createMockConfigClient({ wakeWord: { enabled: true } }); // sin key
+      renderHook(() => useMurmur(makeDeps({ wakeWord, config })));
+      await new Promise((r) => setTimeout(r, 20));
+      expect(wakeWord.enabled).toBe(false);
+    });
+
+    it('al desmontar detiene el detector', async () => {
+      const wakeWord = createMockWakeWordDetector();
+      const config = createMockConfigClient({
+        apiKey: 'sk-test-key-abcdef',
+        wakeWord: { enabled: true },
+      });
+      const { unmount } = renderHook(() => useMurmur(makeDeps({ wakeWord, config })));
+      await waitFor(() => expect(wakeWord.enabled).toBe(true));
+      unmount();
+      await waitFor(() => expect(wakeWord.enabled).toBe(false));
+    });
   });
 });

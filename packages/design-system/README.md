@@ -12,7 +12,7 @@ import '@murmur/design-system/tokens.css'; // variables --mur-*
 
 - `tokens` — objeto tipado (`color`, `font`, `space`, `radius`, `shadow`, `motion`).
 - `stateVisuals[state]` — `{ color, animation, label }` para `idle | listening | thinking |
-  speaking | error`.
+speaking | error`.
 - `tokens.css` — variables CSS `--mur-*`. Tema vía `data-theme="dark|light"` o
   `prefers-color-scheme`.
 

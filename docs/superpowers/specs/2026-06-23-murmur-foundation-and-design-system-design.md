@@ -25,15 +25,15 @@ spec → plan → implementación y debe dejar el repo funcional.
 
 ## 2. Decisiones confirmadas
 
-| Decisión | Valor |
-|---|---|
-| Nombre de producto / CLI | **murmur** (`murmur start`, `murmur config`, …) |
-| Personalidad de marca | Íntima, humana, cálida, cercana |
-| Dirección visual | **Cápsula cálida** (pill flotante discreta, la onda de audio como protagonista) |
-| Tema | **System-aware**: dark + light desde el design system |
-| Plataformas | **Cross-platform estricto** (macOS, Windows, Linux desde el inicio) |
-| Acento | Terracota / coral `#E0916B` |
-| Tipografía | Inter/SF (UI) · JetBrains Mono (transcripción/CLI) |
+| Decisión                 | Valor                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------- |
+| Nombre de producto / CLI | **murmur** (`murmur start`, `murmur config`, …)                                 |
+| Personalidad de marca    | Íntima, humana, cálida, cercana                                                 |
+| Dirección visual         | **Cápsula cálida** (pill flotante discreta, la onda de audio como protagonista) |
+| Tema                     | **System-aware**: dark + light desde el design system                           |
+| Plataformas              | **Cross-platform estricto** (macOS, Windows, Linux desde el inicio)             |
+| Acento                   | Terracota / coral `#E0916B`                                                     |
+| Tipografía               | Inter/SF (UI) · JetBrains Mono (transcripción/CLI)                              |
 
 ## 3. Principios de diseño técnico
 
@@ -77,17 +77,17 @@ wish-pear/
 
 ### 4.1 Tooling
 
-| Aspecto | Elección | Notas |
-|---|---|---|
-| Gestor de paquetes | **pnpm workspaces** | `pnpm -r` / `--filter` para tareas; sin Turborepo aún (TODO si el grafo crece) |
-| Lenguaje | **TypeScript strict**, ESM nativo | `tsconfig.base.json` heredado por cada paquete |
-| Build de paquetes | **tsup** | bundling rápido + `.d.ts` |
-| Typecheck | **tsc --noEmit** | puerta de calidad |
-| Lint | **ESLint 9 (flat config)** | + `@typescript-eslint` |
-| Formato | **Prettier** | |
-| Tests | **Vitest** | mocks de OpenAI desde el inicio |
-| Node | **≥ 20** (entorno actual: 26) | `.nvmrc` + `engines` |
-| pnpm | fijado vía `packageManager` en `package.json` | |
+| Aspecto            | Elección                                      | Notas                                                                          |
+| ------------------ | --------------------------------------------- | ------------------------------------------------------------------------------ |
+| Gestor de paquetes | **pnpm workspaces**                           | `pnpm -r` / `--filter` para tareas; sin Turborepo aún (TODO si el grafo crece) |
+| Lenguaje           | **TypeScript strict**, ESM nativo             | `tsconfig.base.json` heredado por cada paquete                                 |
+| Build de paquetes  | **tsup**                                      | bundling rápido + `.d.ts`                                                      |
+| Typecheck          | **tsc --noEmit**                              | puerta de calidad                                                              |
+| Lint               | **ESLint 9 (flat config)**                    | + `@typescript-eslint`                                                         |
+| Formato            | **Prettier**                                  |                                                                                |
+| Tests              | **Vitest**                                    | mocks de OpenAI desde el inicio                                                |
+| Node               | **≥ 20** (entorno actual: 26)                 | `.nvmrc` + `engines`                                                           |
+| pnpm               | fijado vía `packageManager` en `package.json` |                                                                                |
 
 ### 4.2 Scripts raíz
 
@@ -109,7 +109,7 @@ Las interfaces se definen como contratos (tipos) en Fase 0; la implementación l
   `AudioDeviceManager`. Diseñadas para streaming de baja latencia.
 - **rag** — `EmbeddingProvider`, `MemoryStore`, `RagRetriever`, `SessionSummarizer`,
   `FactExtractor`. Tipos de memoria: `short_term | session_summary | long_term_fact |
-  explicit_user_memory`.
+explicit_user_memory`.
 - **cli** — binario `murmur`; `ConfigStore` que lee/escribe `~/.murmur/config.json`.
 - **native** — crate Rust para hotkeys globales y audio nativo donde aporte valor.
 

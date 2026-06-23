@@ -12,16 +12,16 @@ escritorio ligera (Tauri). Codename del repo: `wish-pear`.
 
 ## Estructura (monorepo pnpm)
 
-| Paquete | Responsabilidad |
-|---|---|
-| `packages/shared` | Tipos comunes, errores, utilidades |
-| `packages/design-system` | Tokens de diseño (color, tipografía, motion) + estados |
-| `packages/core` | ConversationOrchestrator, sesiones, interfaces de modelo |
-| `packages/audio` | Interfaces de entrada/salida de audio |
-| `packages/rag` | Memoria semántica: store, embeddings, retriever |
-| `packages/cli` | CLI `murmur` |
-| `packages/native` | Crate Rust (hotkeys / audio nativo) |
-| `apps/desktop` | App de escritorio (Tauri + React) |
+| Paquete                  | Responsabilidad                                          |
+| ------------------------ | -------------------------------------------------------- |
+| `packages/shared`        | Tipos comunes, errores, utilidades                       |
+| `packages/design-system` | Tokens de diseño (color, tipografía, motion) + estados   |
+| `packages/core`          | ConversationOrchestrator, sesiones, interfaces de modelo |
+| `packages/audio`         | Interfaces de entrada/salida de audio                    |
+| `packages/rag`           | Memoria semántica: store, embeddings, retriever          |
+| `packages/cli`           | CLI `murmur`                                             |
+| `packages/native`        | Crate Rust (hotkeys / audio nativo)                      |
+| `apps/desktop`           | App de escritorio (Tauri + React)                        |
 
 ## Scripts
 

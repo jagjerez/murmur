@@ -9,6 +9,7 @@
 **Tech Stack:** pnpm 11, TypeScript 5 (strict, ESM, moduleResolution Bundler), tsup, Vitest, ESLint 9 (flat) + typescript-eslint, Prettier, Vite 6 + React 19 (desktop), Tauri 2 (esqueleto), Rust (crate nativo).
 
 **Convención de commits:** cada commit termina con el trailer:
+
 ```
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
 ```
@@ -44,6 +45,7 @@ Cada paquete TS lleva además: `package.json`, `tsconfig.json` (extiende la base
 ## Task 1: Scaffolding raíz del workspace
 
 **Files:**
+
 - Create: `package.json`
 - Create: `pnpm-workspace.yaml`
 - Create: `tsconfig.base.json`
@@ -57,26 +59,26 @@ Cada paquete TS lleva además: `package.json`, `tsconfig.json` (extiende la base
 
 ```yaml
 packages:
-  - "apps/*"
-  - "packages/*"
+  - 'apps/*'
+  - 'packages/*'
 
 catalog:
   typescript: ^5.7.2
   tsup: ^8.3.5
   vitest: ^3.0.5
   eslint: ^9.17.0
-  "@eslint/js": ^9.17.0
+  '@eslint/js': ^9.17.0
   typescript-eslint: ^8.19.0
   prettier: ^3.4.2
   react: ^19.0.0
   react-dom: ^19.0.0
-  "@types/react": ^19.0.2
-  "@types/react-dom": ^19.0.2
-  "@types/node": ^22.10.5
+  '@types/react': ^19.0.2
+  '@types/react-dom': ^19.0.2
+  '@types/node': ^22.10.5
   vite: ^6.0.7
-  "@vitejs/plugin-react": ^4.3.4
-  "@tauri-apps/cli": ^2.2.2
-  "@tauri-apps/api": ^2.2.0
+  '@vitejs/plugin-react': ^4.3.4
+  '@tauri-apps/cli': ^2.2.2
+  '@tauri-apps/api': ^2.2.0
 ```
 
 - [ ] **Step 2: Crear `package.json` raíz**
@@ -184,7 +186,7 @@ OPENAI_API_KEY=
 
 - [ ] **Step 8: Crear `README.md`**
 
-```markdown
+````markdown
 # murmur
 
 Asistente de voz con IA a nivel de sistema operativo. Atajo de teclado → hablas → respuesta
@@ -199,16 +201,16 @@ escritorio ligera (Tauri). Codename del repo: `wish-pear`.
 
 ## Estructura (monorepo pnpm)
 
-| Paquete | Responsabilidad |
-|---|---|
-| `packages/shared` | Tipos comunes, errores, utilidades |
-| `packages/design-system` | Tokens de diseño (color, tipografía, motion) + estados |
-| `packages/core` | ConversationOrchestrator, sesiones, interfaces de modelo |
-| `packages/audio` | Interfaces de entrada/salida de audio |
-| `packages/rag` | Memoria semántica: store, embeddings, retriever |
-| `packages/cli` | CLI `murmur` |
-| `packages/native` | Crate Rust (hotkeys / audio nativo) |
-| `apps/desktop` | App de escritorio (Tauri + React) |
+| Paquete                  | Responsabilidad                                          |
+| ------------------------ | -------------------------------------------------------- |
+| `packages/shared`        | Tipos comunes, errores, utilidades                       |
+| `packages/design-system` | Tokens de diseño (color, tipografía, motion) + estados   |
+| `packages/core`          | ConversationOrchestrator, sesiones, interfaces de modelo |
+| `packages/audio`         | Interfaces de entrada/salida de audio                    |
+| `packages/rag`           | Memoria semántica: store, embeddings, retriever          |
+| `packages/cli`           | CLI `murmur`                                             |
+| `packages/native`        | Crate Rust (hotkeys / audio nativo)                      |
+| `apps/desktop`           | App de escritorio (Tauri + React)                        |
 
 ## Scripts
 
@@ -221,6 +223,7 @@ pnpm lint         # ESLint
 pnpm format       # Prettier
 pnpm dev          # arranca la app de escritorio en modo dev (frontend)
 ```
+````
 
 El crate Rust se prueba aparte: `cd packages/native && cargo test`.
 
@@ -232,7 +235,8 @@ desarrollo, a un `.env` local (ver `.env.example`).
 ## Estado
 
 En construcción por fases. Ver `docs/superpowers/specs/` y `docs/superpowers/plans/`.
-```
+
+````
 
 - [ ] **Step 9: Instalar y verificar**
 
@@ -246,13 +250,14 @@ git add package.json pnpm-workspace.yaml tsconfig.base.json eslint.config.mjs .p
 git commit -m "chore: scaffolding raíz del monorepo pnpm
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
-```
+````
 
 ---
 
 ## Task 2: `packages/shared` (estados, errores, tipos)
 
 **Files:**
+
 - Create: `packages/shared/package.json`
 - Create: `packages/shared/tsconfig.json`
 - Create: `packages/shared/src/state.ts`
@@ -264,6 +269,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - [ ] **Step 1: Crear `package.json` y `tsconfig.json` del paquete**
 
 `packages/shared/package.json`:
+
 ```json
 {
   "name": "@murmur/shared",
@@ -284,6 +290,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
 
 `packages/shared/tsconfig.json`:
+
 ```json
 {
   "extends": "../../tsconfig.base.json",
@@ -297,6 +304,7 @@ Expected: enlaza el nuevo paquete sin errores.
 - [ ] **Step 2: Escribir el test de estados (falla)**
 
 `packages/shared/src/state.test.ts`:
+
 ```ts
 import { describe, it, expect } from 'vitest';
 import { ASSISTANT_STATES } from './state';
@@ -316,6 +324,7 @@ Expected: FAIL — no existe `./state`.
 - [ ] **Step 4: Implementar `state.ts`**
 
 `packages/shared/src/state.ts`:
+
 ```ts
 /** Estado del asistente. Fuente de verdad del ciclo de vida visible. */
 export type AssistantState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'error';
@@ -332,6 +341,7 @@ export const ASSISTANT_STATES: readonly AssistantState[] = [
 - [ ] **Step 5: Escribir el test de errores (falla)**
 
 `packages/shared/src/errors.test.ts`:
+
 ```ts
 import { describe, it, expect } from 'vitest';
 import { MurmurError, ConfigError, AudioError, ModelError, MemoryError } from './errors';
@@ -362,6 +372,7 @@ Expected: FAIL — no existe `./errors`.
 - [ ] **Step 7: Implementar `errors.ts`**
 
 `packages/shared/src/errors.ts`:
+
 ```ts
 /** Error base de murmur; todos los errores del dominio heredan de aquí. */
 export class MurmurError extends Error {
@@ -406,6 +417,7 @@ export class MemoryError extends MurmurError {
 - [ ] **Step 8: Implementar `types.ts` e `index.ts`**
 
 `packages/shared/src/types.ts`:
+
 ```ts
 export type Role = 'user' | 'assistant' | 'system';
 
@@ -428,6 +440,7 @@ export interface Session {
 ```
 
 `packages/shared/src/index.ts`:
+
 ```ts
 export * from './state';
 export * from './errors';
@@ -453,6 +466,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 3: `packages/design-system` (tokens, estados visuales, CSS)
 
 **Files:**
+
 - Create: `packages/design-system/package.json`
 - Create: `packages/design-system/tsconfig.json`
 - Create: `packages/design-system/src/tokens.ts`
@@ -465,6 +479,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - [ ] **Step 1: Crear `package.json` y `tsconfig.json`**
 
 `packages/design-system/package.json`:
+
 ```json
 {
   "name": "@murmur/design-system",
@@ -491,6 +506,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
 
 `packages/design-system/tsconfig.json`:
+
 ```json
 {
   "extends": "../../tsconfig.base.json",
@@ -504,6 +520,7 @@ Expected: enlaza `@murmur/shared` como dependencia del workspace.
 - [ ] **Step 2: Escribir el test de tokens (falla)**
 
 `packages/design-system/src/tokens.test.ts`:
+
 ```ts
 import { describe, it, expect } from 'vitest';
 import { tokens, color } from './tokens';
@@ -539,6 +556,7 @@ Expected: FAIL — no existe `./tokens`.
 - [ ] **Step 4: Implementar `tokens.ts`**
 
 `packages/design-system/src/tokens.ts`:
+
 ```ts
 export const color = {
   accent: {
@@ -618,6 +636,7 @@ Expected: PASS.
 - [ ] **Step 6: Escribir el test de estados visuales (falla)**
 
 `packages/design-system/src/state-visuals.test.ts`:
+
 ```ts
 import { describe, it, expect } from 'vitest';
 import { ASSISTANT_STATES } from '@murmur/shared';
@@ -650,6 +669,7 @@ Expected: FAIL — no existe `./state-visuals`.
 - [ ] **Step 8: Implementar `state-visuals.ts`**
 
 `packages/design-system/src/state-visuals.ts`:
+
 ```ts
 import type { AssistantState } from '@murmur/shared';
 import { color } from './tokens';
@@ -675,6 +695,7 @@ export const stateVisuals: Record<AssistantState, StateVisual> = {
 - [ ] **Step 9: Crear `tokens.css`, `index.ts` y `README.md`**
 
 `packages/design-system/src/tokens.css`:
+
 ```css
 /* murmur — variables de diseño. Dark por defecto; light vía [data-theme="light"]
    o prefers-color-scheme. */
@@ -740,13 +761,15 @@ export const stateVisuals: Record<AssistantState, StateVisual> = {
 ```
 
 `packages/design-system/src/index.ts`:
+
 ```ts
 export * from './tokens';
 export * from './state-visuals';
 ```
 
 `packages/design-system/README.md`:
-```markdown
+
+````markdown
 # @murmur/design-system
 
 Tokens de diseño de murmur (cápsula cálida, system-aware). Fuente de verdad de color,
@@ -758,10 +781,11 @@ tipografía, espaciado, motion y del mapeo de estados del asistente.
 import { tokens, stateVisuals } from '@murmur/design-system';
 import '@murmur/design-system/tokens.css'; // variables --mur-*
 ```
+````
 
 - `tokens` — objeto tipado (`color`, `font`, `space`, `radius`, `shadow`, `motion`).
 - `stateVisuals[state]` — `{ color, animation, label }` para `idle | listening | thinking |
-  speaking | error`.
+speaking | error`.
 - `tokens.css` — variables CSS `--mur-*`. Tema vía `data-theme="dark|light"` o
   `prefers-color-scheme`.
 
@@ -771,7 +795,8 @@ import '@murmur/design-system/tokens.css'; // variables --mur-*
 - Estados: idle `#9A9088`, listening `#E0916B`, thinking `#B79BE8`, speaking `#E6B450`,
   error `#D8584E`.
 - Tipografía: Inter/SF (UI) · JetBrains Mono (transcripción/CLI).
-```
+
+````
 
 - [ ] **Step 10: Ejecutar tests, typecheck y build**
 
@@ -785,13 +810,14 @@ git add packages/design-system pnpm-lock.yaml
 git commit -m "feat(design-system): tokens, estados visuales y CSS
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
-```
+````
 
 ---
 
 ## Task 4: `packages/core` (interfaces de modelo + orchestrator esqueleto)
 
 **Files:**
+
 - Create: `packages/core/package.json`
 - Create: `packages/core/tsconfig.json`
 - Create: `packages/core/src/providers/realtime-model-provider.ts`
@@ -803,6 +829,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - [ ] **Step 1: Crear `package.json` y `tsconfig.json`**
 
 `packages/core/package.json`:
+
 ```json
 {
   "name": "@murmur/core",
@@ -826,6 +853,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
 
 `packages/core/tsconfig.json`:
+
 ```json
 {
   "extends": "../../tsconfig.base.json",
@@ -838,6 +866,7 @@ Run: `pnpm install`
 - [ ] **Step 2: Escribir el test del orchestrator (falla)**
 
 `packages/core/src/orchestrator.test.ts`:
+
 ```ts
 import { describe, it, expect, vi } from 'vitest';
 import { ConversationOrchestrator } from './orchestrator';
@@ -865,6 +894,7 @@ Expected: FAIL — no existe `./orchestrator`.
 - [ ] **Step 4: Implementar las interfaces de proveedor**
 
 `packages/core/src/providers/realtime-model-provider.ts`:
+
 ```ts
 import type { AssistantState } from '@murmur/shared';
 
@@ -892,6 +922,7 @@ export interface RealtimeModelProvider {
 ```
 
 `packages/core/src/providers/transcription-provider.ts`:
+
 ```ts
 export type TranscriptionMode = 'realtime' | 'whisper-api' | 'local-whisper';
 
@@ -905,6 +936,7 @@ export interface TranscriptionProvider {
 - [ ] **Step 5: Implementar `orchestrator.ts`**
 
 `packages/core/src/orchestrator.ts`:
+
 ```ts
 import type { AssistantState } from '@murmur/shared';
 
@@ -939,6 +971,7 @@ export class ConversationOrchestrator {
 - [ ] **Step 6: Implementar `index.ts`**
 
 `packages/core/src/index.ts`:
+
 ```ts
 export * from './orchestrator';
 export * from './providers/realtime-model-provider';
@@ -964,6 +997,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 5: `packages/audio` (interfaces de audio + null device manager)
 
 **Files:**
+
 - Create: `packages/audio/package.json`
 - Create: `packages/audio/tsconfig.json`
 - Create: `packages/audio/src/providers.ts`
@@ -973,6 +1007,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - [ ] **Step 1: Crear `package.json` y `tsconfig.json`**
 
 `packages/audio/package.json`:
+
 ```json
 {
   "name": "@murmur/audio",
@@ -996,6 +1031,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
 
 `packages/audio/tsconfig.json`:
+
 ```json
 {
   "extends": "../../tsconfig.base.json",
@@ -1008,6 +1044,7 @@ Run: `pnpm install`
 - [ ] **Step 2: Escribir el test (falla)**
 
 `packages/audio/src/providers.test.ts`:
+
 ```ts
 import { describe, it, expect } from 'vitest';
 import { createNullAudioDeviceManager } from './providers';
@@ -1028,6 +1065,7 @@ Expected: FAIL — no existe `./providers`.
 - [ ] **Step 4: Implementar `providers.ts`**
 
 `packages/audio/src/providers.ts`:
+
 ```ts
 /** Flujo de audio como iterable asíncrono de chunks PCM. */
 export interface AudioStream {
@@ -1067,6 +1105,7 @@ export function createNullAudioDeviceManager(): AudioDeviceManager {
 - [ ] **Step 5: Implementar `index.ts`**
 
 `packages/audio/src/index.ts`:
+
 ```ts
 export * from './providers';
 ```
@@ -1090,6 +1129,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 6: `packages/rag` (tipos de memoria + interfaces)
 
 **Files:**
+
 - Create: `packages/rag/package.json`
 - Create: `packages/rag/tsconfig.json`
 - Create: `packages/rag/src/types.ts`
@@ -1100,6 +1140,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - [ ] **Step 1: Crear `package.json` y `tsconfig.json`**
 
 `packages/rag/package.json`:
+
 ```json
 {
   "name": "@murmur/rag",
@@ -1123,6 +1164,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
 
 `packages/rag/tsconfig.json`:
+
 ```json
 {
   "extends": "../../tsconfig.base.json",
@@ -1135,6 +1177,7 @@ Run: `pnpm install`
 - [ ] **Step 2: Escribir el test (falla)**
 
 `packages/rag/src/types.test.ts`:
+
 ```ts
 import { describe, it, expect } from 'vitest';
 import { MEMORY_TYPES } from './types';
@@ -1159,6 +1202,7 @@ Expected: FAIL — no existe `./types`.
 - [ ] **Step 4: Implementar `types.ts`**
 
 `packages/rag/src/types.ts`:
+
 ```ts
 export const MEMORY_TYPES = [
   'short_term',
@@ -1182,6 +1226,7 @@ export interface MemoryItem {
 - [ ] **Step 5: Implementar `providers.ts`**
 
 `packages/rag/src/providers.ts`:
+
 ```ts
 import type { MemoryItem } from './types';
 
@@ -1212,6 +1257,7 @@ export interface FactExtractor {
 - [ ] **Step 6: Implementar `index.ts`**
 
 `packages/rag/src/index.ts`:
+
 ```ts
 export * from './types';
 export * from './providers';
@@ -1236,6 +1282,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 7: `packages/cli` (lógica + binario `murmur`)
 
 **Files:**
+
 - Create: `packages/cli/package.json`
 - Create: `packages/cli/tsconfig.json`
 - Create: `packages/cli/tsup.config.ts`
@@ -1246,6 +1293,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - [ ] **Step 1: Crear `package.json`, `tsconfig.json` y `tsup.config.ts`**
 
 `packages/cli/package.json`:
+
 ```json
 {
   "name": "murmur",
@@ -1271,6 +1319,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
 
 `packages/cli/tsconfig.json`:
+
 ```json
 {
   "extends": "../../tsconfig.base.json",
@@ -1279,6 +1328,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
 
 `packages/cli/tsup.config.ts` (empaqueta las deps del workspace dentro del binario):
+
 ```ts
 import { defineConfig } from 'tsup';
 
@@ -1296,6 +1346,7 @@ Run: `pnpm install`
 - [ ] **Step 2: Escribir el test (falla)**
 
 `packages/cli/src/cli.test.ts`:
+
 ```ts
 import { describe, it, expect } from 'vitest';
 import { run, VERSION } from './cli';
@@ -1324,6 +1375,7 @@ Expected: FAIL — no existe `./cli`.
 - [ ] **Step 4: Implementar `cli.ts`**
 
 `packages/cli/src/cli.ts`:
+
 ```ts
 export const VERSION = '0.0.0';
 
@@ -1361,6 +1413,7 @@ export function run(argv: string[]): string {
 - [ ] **Step 5: Implementar el binario `index.ts`**
 
 `packages/cli/src/index.ts`:
+
 ```ts
 #!/usr/bin/env node
 import { run } from './cli';
@@ -1395,6 +1448,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 8: `packages/native` (crate Rust autónomo)
 
 **Files:**
+
 - Create: `packages/native/Cargo.toml`
 - Create: `packages/native/src/lib.rs`
 
@@ -1403,6 +1457,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - [ ] **Step 1: Crear `Cargo.toml`**
 
 `packages/native/Cargo.toml`:
+
 ```toml
 [package]
 name = "murmur-native"
@@ -1417,6 +1472,7 @@ crate-type = ["rlib"]
 - [ ] **Step 2: Implementar `src/lib.rs` con su test**
 
 `packages/native/src/lib.rs`:
+
 ```rust
 //! Helpers nativos de murmur (hotkeys globales, audio nativo). Esqueleto para Fase 3+.
 
@@ -1455,6 +1511,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 9: `apps/desktop` (esqueleto Vite + React + cáscara Tauri)
 
 **Files:**
+
 - Create: `apps/desktop/package.json`
 - Create: `apps/desktop/tsconfig.json`
 - Create: `apps/desktop/vite.config.ts`
@@ -1475,6 +1532,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - [ ] **Step 1: Crear `package.json`**
 
 `apps/desktop/package.json`:
+
 ```json
 {
   "name": "@murmur/desktop",
@@ -1506,6 +1564,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
 
 `apps/desktop/tsconfig.json`:
+
 ```json
 {
   "extends": "../../tsconfig.base.json",
@@ -1518,6 +1577,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
 
 `apps/desktop/vite.config.ts`:
+
 ```ts
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -1534,6 +1594,7 @@ Run: `pnpm install`
 - [ ] **Step 2: Crear `index.html`**
 
 `apps/desktop/index.html`:
+
 ```html
 <!doctype html>
 <html lang="es" data-theme="dark">
@@ -1552,6 +1613,7 @@ Run: `pnpm install`
 - [ ] **Step 3: Crear `src/styles.css` y `src/App.tsx` (consume el design system)**
 
 `apps/desktop/src/styles.css`:
+
 ```css
 * {
   box-sizing: border-box;
@@ -1588,6 +1650,7 @@ body {
 ```
 
 `apps/desktop/src/App.tsx`:
+
 ```tsx
 import type { AssistantState } from '@murmur/shared';
 import { stateVisuals } from '@murmur/design-system';
@@ -1608,6 +1671,7 @@ export function App() {
 - [ ] **Step 4: Crear `src/main.tsx`**
 
 `apps/desktop/src/main.tsx`:
+
 ```tsx
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -1630,6 +1694,7 @@ createRoot(rootEl).render(
 - [ ] **Step 5: Crear la cáscara Tauri (esqueleto, no se construye en este pipeline)**
 
 `apps/desktop/src-tauri/tauri.conf.json`:
+
 ```json
 {
   "$schema": "https://schema.tauri.app/config/2",
@@ -1661,6 +1726,7 @@ createRoot(rootEl).render(
 ```
 
 `apps/desktop/src-tauri/Cargo.toml`:
+
 ```toml
 [package]
 name = "murmur-desktop"
@@ -1679,6 +1745,7 @@ tauri = { version = "2", features = [] }
 ```
 
 `apps/desktop/src-tauri/build.rs`:
+
 ```rust
 fn main() {
     tauri_build::build()
@@ -1686,6 +1753,7 @@ fn main() {
 ```
 
 `apps/desktop/src-tauri/src/lib.rs`:
+
 ```rust
 //! Cáscara Tauri de murmur. La integración nativa (hotkeys, audio) llega en Fase 2+.
 
@@ -1698,6 +1766,7 @@ pub fn run() {
 ```
 
 `apps/desktop/src-tauri/src/main.rs`:
+
 ```rust
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -1726,11 +1795,13 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 10: Brief de diseño del MVP
 
 **Files:**
+
 - Create: `docs/design/mvp-brief.md`
 
 - [ ] **Step 1: Escribir el brief**
 
 `docs/design/mvp-brief.md`:
+
 ```markdown
 # murmur — Brief de diseño del MVP
 
@@ -1858,6 +1929,7 @@ Expected: PASS.
 - [ ] **Step 8: Verificación de criterios de aceptación (spec §8)**
 
 Comprobar manualmente:
+
 - Existe la estructura de §4 del spec.
 - `@murmur/design-system` exporta los tokens.
 - Existen `README.md`, `.env.example`, `.nvmrc`, `.gitignore`.
@@ -1878,6 +1950,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>" || echo "n
 ## Self-Review (autor del plan)
 
 **Cobertura del spec:**
+
 - §4 Arquitectura/tooling → Tasks 1–9. ✓
 - §4.3 Interfaces por paquete → core (T4), audio (T5), rag (T6), cli (T7), shared (T2). ✓
 - §5 Design system (tokens, state-visuals, CSS, README) → Task 3. ✓
@@ -1897,4 +1970,7 @@ no huecos del plan. Todo paso tiene código/comando concreto.
 `StateVisual`, `StateAnimation`, `MEMORY_TYPES`/`MemoryType`, `ConversationOrchestrator`
 (`getState`/`reset`/`setState`), `run`/`VERSION`/`helpText`, `createNullAudioDeviceManager`
 coinciden entre tareas, tests e implementación.
+
+```
+
 ```

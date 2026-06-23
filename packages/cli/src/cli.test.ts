@@ -313,7 +313,10 @@ describe('cli run', () => {
 
     it('memory forget de un id inexistente → exitCode 1', async () => {
       const { factory } = sharedStore();
-      const { exitCode } = await run(['memory', 'forget', 'nope'], { config, storeFactory: factory });
+      const { exitCode } = await run(['memory', 'forget', 'nope'], {
+        config,
+        storeFactory: factory,
+      });
       expect(exitCode).toBe(1);
     });
 
@@ -383,7 +386,11 @@ describe('cli run', () => {
       });
 
       config.setPrivacy({ retentionDays: 30 });
-      const prune = await run(['memory', 'prune'], { config, storeFactory: factory, now: () => now });
+      const prune = await run(['memory', 'prune'], {
+        config,
+        storeFactory: factory,
+        now: () => now,
+      });
       expect(prune.exitCode).toBe(0);
 
       const remaining = (await factory().memory.all()).map((m) => m.id);
@@ -408,7 +415,10 @@ describe('cli run', () => {
         createdAt: Date.now(),
       });
 
-      const { stdout, exitCode } = await run(['memory', 'prune'], { config, storeFactory: factory });
+      const { stdout, exitCode } = await run(['memory', 'prune'], {
+        config,
+        storeFactory: factory,
+      });
       expect(exitCode).toBe(0);
       expect(stdout.length).toBeGreaterThan(0);
       expect(await factory().memory.count()).toBe(1);

@@ -16,14 +16,14 @@ los flags. Todo local-first y testeable sin red.
 
 ## 2. Decisiones confirmadas
 
-| Tema | Decisión |
-| ---- | -------- |
-| Config de privacidad | `MurmurConfig.privacy`: `{ localOnlyMode: boolean (default false); storeTranscripts: boolean (default true); redactBeforeStore: boolean (default false); retentionDays: number (0 = sin límite, default 0) }`. `ConfigStore` lo valida/normaliza con defaults; setters/`config` lo muestran. |
-| Modo local | `localOnlyMode: true` → el orchestrator **no inyecta** contexto RAG en el prompt (no se envía memoria al modelo). El audio sigue yendo al modelo realtime (es inherente al producto); se documenta el alcance. |
-| Retención | `pruneOlderThan(beforeMs)` en el store borra `memory_items`, `messages` (y `sessions` vacías) anteriores. `retentionDays>0` aplica la poda (al arrancar / vía `murmur memory prune`). |
-| Redacción | `redactSensitive(text)` en `@murmur/shared`: sustituye emails, claves tipo `sk-…`, secuencias largas de dígitos (tarjetas/teléfonos) por marcadores (`[email]`, `[clave]`, `[número]`). Con `redactBeforeStore: true`, el orchestrator redacta los mensajes antes de `addMessage`. Determinista, pura. |
-| Memoria explícita (CLI) | Nuevos subcomandos: `murmur memory list`, `murmur memory add <texto>` (guarda `explicit_user_memory`), `murmur memory forget <id>`, `murmur memory export [ruta]` (JSON con memoria+sesiones+mensajes), `murmur memory prune`, además del `memory reset` existente. Store inyectable en tests. |
-| Export | `store.exportAll()` → `{ memory: MemoryItem[]; sessions: Session[]; messages: Message[] }` serializable. `memory export` lo escribe (a stdout o a `ruta`). |
+| Tema                    | Decisión                                                                                                                                                                                                                                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Config de privacidad    | `MurmurConfig.privacy`: `{ localOnlyMode: boolean (default false); storeTranscripts: boolean (default true); redactBeforeStore: boolean (default false); retentionDays: number (0 = sin límite, default 0) }`. `ConfigStore` lo valida/normaliza con defaults; setters/`config` lo muestran.           |
+| Modo local              | `localOnlyMode: true` → el orchestrator **no inyecta** contexto RAG en el prompt (no se envía memoria al modelo). El audio sigue yendo al modelo realtime (es inherente al producto); se documenta el alcance.                                                                                         |
+| Retención               | `pruneOlderThan(beforeMs)` en el store borra `memory_items`, `messages` (y `sessions` vacías) anteriores. `retentionDays>0` aplica la poda (al arrancar / vía `murmur memory prune`).                                                                                                                  |
+| Redacción               | `redactSensitive(text)` en `@murmur/shared`: sustituye emails, claves tipo `sk-…`, secuencias largas de dígitos (tarjetas/teléfonos) por marcadores (`[email]`, `[clave]`, `[número]`). Con `redactBeforeStore: true`, el orchestrator redacta los mensajes antes de `addMessage`. Determinista, pura. |
+| Memoria explícita (CLI) | Nuevos subcomandos: `murmur memory list`, `murmur memory add <texto>` (guarda `explicit_user_memory`), `murmur memory forget <id>`, `murmur memory export [ruta]` (JSON con memoria+sesiones+mensajes), `murmur memory prune`, además del `memory reset` existente. Store inyectable en tests.         |
+| Export                  | `store.exportAll()` → `{ memory: MemoryItem[]; sessions: Session[]; messages: Message[] }` serializable. `memory export` lo escribe (a stdout o a `ruta`).                                                                                                                                             |
 
 ## 3. Entregables
 

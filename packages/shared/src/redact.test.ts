@@ -13,7 +13,9 @@ describe('redactSensitive', () => {
   });
 
   it('redacta claves tipo sk-…', () => {
-    expect(redactSensitive('mi clave es sk-ABCdef0123456789 vale')).toBe('mi clave es [clave] vale');
+    expect(redactSensitive('mi clave es sk-ABCdef0123456789 vale')).toBe(
+      'mi clave es [clave] vale',
+    );
   });
 
   it('redacta secuencias largas de dígitos (tarjetas/teléfonos)', () => {

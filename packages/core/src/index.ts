@@ -6,4 +6,5 @@ export * from './providers/openai-realtime';
 export * from './providers/mock-realtime';
 export * from './providers/fake-websocket';
 export * from './hotkey';
+export * from './wake-word';
 export * from './prompt';

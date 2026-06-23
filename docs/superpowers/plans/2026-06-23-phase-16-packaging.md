@@ -18,13 +18,13 @@ NO toques `docs/superpowers/PROGRESS.md`.
 **Files:** `packages/cli/package.json`, `LICENSE`, `package.json` de los paquetes internos y `apps/desktop`.
 
 - [ ] `packages/cli/package.json`: `description`, `keywords`, `license: "MIT"`, `repository`, `bin`,
-  `files: ["dist"]`, `engines`, `publishConfig: { access: "public" }`, `prepack`/`prepublishOnly: "tsup"`.
-  (Mantener `noExternal: [/^@murmur\//]` para bundlear las deps internas.)
+      `files: ["dist"]`, `engines`, `publishConfig: { access: "public" }`, `prepack`/`prepublishOnly: "tsup"`.
+      (Mantener `noExternal: [/^@murmur\//]` para bundlear las deps internas.)
 - [ ] Marcar `"private": true` en `@murmur/{shared,design-system,core,audio,rag,plugins}` y `apps/desktop`
-  (no en `murmur`).
+      (no en `murmur`).
 - [ ] Crear `LICENSE` (MIT, copyright "murmur contributors", 2026).
 - [ ] Verificar: `cd packages/cli && npm pack --dry-run` lista `dist/**` + `package.json` (sin `src`/`.env`);
-  tras `pnpm --filter murmur build`, `MURMUR_HOME=$(mktemp -d) node packages/cli/dist/index.js --version` imprime la versión.
+      tras `pnpm --filter murmur build`, `MURMUR_HOME=$(mktemp -d) node packages/cli/dist/index.js --version` imprime la versión.
 - [ ] Commit: `chore(cli): metadatos de publicación npm + LICENSE`.
 
 ## Task 2: Bundle Tauri + iconos
@@ -32,11 +32,11 @@ NO toques `docs/superpowers/PROGRESS.md`.
 **Files:** `apps/desktop/src-tauri/tauri.conf.json`, `apps/desktop/src-tauri/icons/icon.svg`.
 
 - [ ] Completar `bundle` en `tauri.conf.json`: `active: true`, `targets: "all"` (o lista),
-  `icon: ["icons/32x32.png","icons/128x128.png","icons/icon.icns","icons/icon.ico"]`, `category`,
-  `shortDescription`/`longDescription`, `copyright`. Mantener la ventana/CSP existentes.
+      `icon: ["icons/32x32.png","icons/128x128.png","icons/icon.icns","icons/icon.ico"]`, `category`,
+      `shortDescription`/`longDescription`, `copyright`. Mantener la ventana/CSP existentes.
 - [ ] Crear `icons/icon.svg` (logo simple de murmur: cápsula/onda en terracota `#E0916B`). Documentar
-  en un comentario/README que los binarios de icono se generan con `pnpm tauri icon icons/icon.svg`
-  (no se commitean; el build de release los crea). La ausencia de los `.png/.icns/.ico` no rompe el pipeline pnpm.
+      en un comentario/README que los binarios de icono se generan con `pnpm tauri icon icons/icon.svg`
+      (no se commitean; el build de release los crea). La ausencia de los `.png/.icns/.ico` no rompe el pipeline pnpm.
 - [ ] Commit: `chore(desktop): bundle Tauri completo + icono fuente`.
 
 ## Task 3: CI y release workflows
@@ -44,11 +44,11 @@ NO toques `docs/superpowers/PROGRESS.md`.
 **Files:** `.github/workflows/ci.yml`, `.github/workflows/release.yml`.
 
 - [ ] `ci.yml`: en `push`/`pull_request`, sobre ubuntu, setup pnpm + Node 20, `pnpm install`,
-  `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm exec prettier --check .`, y
-  `cargo test` en `packages/native` (con toolchain Rust). YAML válido.
+      `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm exec prettier --check .`, y
+      `cargo test` en `packages/native` (con toolchain Rust). YAML válido.
 - [ ] `release.yml` (plantilla documentada): matriz macOS/Windows/Linux que instala deps de sistema
-  del webview, `pnpm tauri build`, sube artefactos; job de `npm publish` del CLI en tags `v*`.
-  Comentar que requiere secretos (`NPM_TOKEN`, firma) y no se ejecuta sin ellos.
+      del webview, `pnpm tauri build`, sube artefactos; job de `npm publish` del CLI en tags `v*`.
+      Comentar que requiere secretos (`NPM_TOKEN`, firma) y no se ejecuta sin ellos.
 - [ ] Commit: `ci: workflow de calidad y plantilla de release`.
 
 ## Task 4: Docs (README + RELEASING)
@@ -56,10 +56,10 @@ NO toques `docs/superpowers/PROGRESS.md`.
 **Files:** `README.md`, `docs/RELEASING.md`.
 
 - [ ] README: instalación del CLI (`npm i -g murmur`), app de escritorio (desde releases / `pnpm tauri build`),
-  uso (`murmur start/config/status/memory/plugins`), arquitectura (tabla de paquetes ya existente, ampliada
-  con `plugins`), y nota de privacidad (F12). 
+      uso (`murmur start/config/status/memory/plugins`), arquitectura (tabla de paquetes ya existente, ampliada
+      con `plugins`), y nota de privacidad (F12).
 - [ ] `docs/RELEASING.md`: pasos de release (bump de versión, `tauri icon`, build, tag `vX.Y.Z`, CI release,
-  `npm publish`), y la verificación E2E.
+      `npm publish`), y la verificación E2E.
 - [ ] Commit: `docs: instalación, uso y proceso de release`.
 
 ## Task 5: Verificación E2E final

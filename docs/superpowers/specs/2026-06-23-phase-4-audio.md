@@ -20,16 +20,16 @@ como vía futura detrás de las mismas interfaces.
 
 ## 2. Decisiones confirmadas
 
-| Tema | Decisión |
-| ---- | -------- |
-| Formato PCM canónico | Int16 little-endian, mono, **24000 Hz** (lo que espera OpenAI Realtime). Las utilidades convierten desde/hacia Float32 de Web Audio. |
-| Utilidades PCM | `@murmur/audio` `pcm.ts`: `float32ToPcm16`, `pcm16ToFloat32`, `resampleLinear(src, inRate, outRate)`, `concatChunks`, `chunkBytes`, `rms`, `pcm16ToBase64`/`base64ToPcm16`. Puras, sin dependencias. |
-| Puente de stream | `createPushPullStream()` → `AudioStream` con `push(chunk)`/`end()`/`fail(err)`; el consumidor itera `read()` (async iterable) con backpressure simple (cola). Conecta callbacks de audio con la interfaz `AudioStream`. |
-| Providers mock | `createMockVoiceInput(chunks)` (emite chunks predefinidos), `createMemoryVoiceOutput()` (acumula lo reproducido), `createMockAudioDeviceManager(devices)`. Para tests y para el orchestrator (F9). |
-| Providers Web | `apps/desktop/src/audio/web-audio.ts`: `WebAudioDeviceManager` (`enumerateDevices`), `WebVoiceInputProvider` (`getUserMedia` + grafo de audio → PCM16 24k vía push-pull stream), `WebVoiceOutputProvider` (`AudioContext` reproduce chunks PCM16). Guardados para entornos sin Web Audio. |
-| Nivel de audio | Hook `useAudioLevel(input, active)` → número 0..1 (RMS) para alimentar el `Waveform` de la cápsula con niveles reales. Testeado con `createMockVoiceInput`. |
-| Permisos Tauri | Capacidad/permisos del webview para micrófono coherentes (documentar; la build nativa no se ejecuta). |
-| Nativo | cpal/native NO en esta fase; documentado como reemplazo futuro detrás de `VoiceInputProvider`/`VoiceOutputProvider`. |
+| Tema                 | Decisión                                                                                                                                                                                                                                                                                  |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Formato PCM canónico | Int16 little-endian, mono, **24000 Hz** (lo que espera OpenAI Realtime). Las utilidades convierten desde/hacia Float32 de Web Audio.                                                                                                                                                      |
+| Utilidades PCM       | `@murmur/audio` `pcm.ts`: `float32ToPcm16`, `pcm16ToFloat32`, `resampleLinear(src, inRate, outRate)`, `concatChunks`, `chunkBytes`, `rms`, `pcm16ToBase64`/`base64ToPcm16`. Puras, sin dependencias.                                                                                      |
+| Puente de stream     | `createPushPullStream()` → `AudioStream` con `push(chunk)`/`end()`/`fail(err)`; el consumidor itera `read()` (async iterable) con backpressure simple (cola). Conecta callbacks de audio con la interfaz `AudioStream`.                                                                   |
+| Providers mock       | `createMockVoiceInput(chunks)` (emite chunks predefinidos), `createMemoryVoiceOutput()` (acumula lo reproducido), `createMockAudioDeviceManager(devices)`. Para tests y para el orchestrator (F9).                                                                                        |
+| Providers Web        | `apps/desktop/src/audio/web-audio.ts`: `WebAudioDeviceManager` (`enumerateDevices`), `WebVoiceInputProvider` (`getUserMedia` + grafo de audio → PCM16 24k vía push-pull stream), `WebVoiceOutputProvider` (`AudioContext` reproduce chunks PCM16). Guardados para entornos sin Web Audio. |
+| Nivel de audio       | Hook `useAudioLevel(input, active)` → número 0..1 (RMS) para alimentar el `Waveform` de la cápsula con niveles reales. Testeado con `createMockVoiceInput`.                                                                                                                               |
+| Permisos Tauri       | Capacidad/permisos del webview para micrófono coherentes (documentar; la build nativa no se ejecuta).                                                                                                                                                                                     |
+| Nativo               | cpal/native NO en esta fase; documentado como reemplazo futuro detrás de `VoiceInputProvider`/`VoiceOutputProvider`.                                                                                                                                                                      |
 
 ## 3. Entregables
 

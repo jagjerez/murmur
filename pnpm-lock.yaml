@@ -92,6 +92,9 @@ importers:
 
   apps/desktop:
     dependencies:
+      '@murmur/audio':
+        specifier: workspace:*
+        version: link:../../packages/audio
       '@murmur/core':
         specifier: workspace:*
         version: link:../../packages/core

@@ -13,6 +13,8 @@ export interface CapsuleProps {
   onPress: () => void;
   onRelease: () => void;
   onCancel: () => void;
+  /** Nivel de audio real 0..1 para alimentar el ecualizador (Fase 4). */
+  level?: number;
 }
 
 function isActivationKey(key: string): boolean {
@@ -32,6 +34,7 @@ export function Capsule({
   onPress,
   onRelease,
   onCancel,
+  level,
 }: CapsuleProps) {
   const visual = deriveVisual(state);
   const dotClass = visual.animation === 'none' ? 'dot' : `dot dot--${visual.animation}`;
@@ -76,7 +79,12 @@ export function Capsule({
         onClick={onPress}
       >
         <span className={dotClass} style={{ background: visual.color }} />
-        <Waveform active={visual.showEq} state={state} color={visual.color} />
+        <Waveform
+          active={visual.showEq}
+          state={state}
+          color={visual.color}
+          level={visual.showEq ? level : undefined}
+        />
         <span className="label">{visual.label}</span>
       </button>
     ) : (
@@ -91,7 +99,12 @@ export function Capsule({
         onKeyUp={handleKeyUp}
       >
         <span className={dotClass} style={{ background: visual.color }} />
-        <Waveform active={visual.showEq} state={state} color={visual.color} />
+        <Waveform
+          active={visual.showEq}
+          state={state}
+          color={visual.color}
+          level={visual.showEq ? level : undefined}
+        />
         <span className="label">{visual.label}</span>
       </button>
     );

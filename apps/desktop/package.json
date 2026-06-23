@@ -11,6 +11,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@murmur/audio": "workspace:*",
     "@murmur/core": "workspace:*",
     "@murmur/design-system": "workspace:*",
     "@murmur/shared": "workspace:*",

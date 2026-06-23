@@ -188,9 +188,30 @@ body {
   gap: 6px;
 }
 
-.dev-row > span {
+.dev-row > span,
+.dev-row > label {
   color: var(--mur-text-muted);
   font-family: var(--mur-font-mono);
+}
+
+.dev-row .muted {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.dev-row select {
+  padding: 5px 10px;
+  border-radius: var(--mur-radius-sm, 8px);
+  border: 1px solid var(--mur-border);
+  background: var(--mur-glass);
+  color: var(--mur-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.dev-row select:focus-visible {
+  outline: 2px solid var(--mur-accent-400);
+  outline-offset: 2px;
 }
 
 .dev-row .group {

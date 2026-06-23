@@ -27,7 +27,7 @@
 | 11   | UI avanzada (onboarding, ajustes, estados de error/vacío, transcripción)                                 | ✅ COMPLETA (en `main`) |
 | 12   | Privacidad (modo local, retención, borrado/exportación, memoria explícita)                               | ✅ COMPLETA (en `main`) |
 | 13   | Whisper (TranscriptionProvider local/whisper-api como fallback)                                          | ✅ COMPLETA (en `main`) |
-| 14   | Wake word ("hey murmur", native, toggle en config)                                                       | ⬜ pendiente            |
+| 14   | Wake word ("hey murmur", native, toggle en config)                                                       | ✅ COMPLETA (en `main`) |
 | 15   | Plugins (sistema de skills/acciones, registry, ejemplos)                                                 | ⬜ pendiente            |
 | 16   | Packaging (npm publish CLI, bundling Tauri por plataforma, CI, iconos, docs)                             | ⬜ pendiente            |
 
@@ -164,3 +164,10 @@
   `selectTranscriptionProvider`. CLI: `MurmurConfig.transcription` (default `realtime`) +
   `config set-transcription` validado. 443 tests TS (core 107, cli 62). Nota: `TranscriptionMode`
   duplicado en cli/config.ts (cli no depende de core) — sincronizar si divergen.
+- Fase 14: Wake word (mergeada en `main`, commit `3811194`; Workflow `pass` al primer intento, sin
+  issues). `packages/native/src/wakeword.rs` (RingBuffer wrap-around, `frame_energy` RMS,
+  `normalize_phrase`, `WakeWordGate` por score≥sensitivity y energía>umbral, `acoustic_score_stub`
+  documentado), 30 cargo tests (20 nuevos). `@murmur/core/src/wake-word.ts` (`WakeWordDetector` +
+  mock `triggerDetection` + null). CLI `MurmurConfig.wakeWord` (enabled/phrase/sensitivity) +
+  `config set-wakeword` validado. `useMurmur` arranca el detector si `enabled` + hay key; onDetected→
+  captura. 474 TS tests. App.tsx aún no inyecta un detector concreto (queda para F16/usuario).

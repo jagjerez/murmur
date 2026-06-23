@@ -25,7 +25,7 @@
     "url": "https://github.com/murmur/murmur/issues"
   },
   "bin": {
-    "murmur": "./dist/index.js"
+    "murmur": "dist/index.js"
   },
   "files": [
     "dist"
@@ -38,8 +38,8 @@
   },
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "scripts": {
@@ -49,12 +49,10 @@
     "prepack": "tsup",
     "prepublishOnly": "tsup"
   },
-  "dependencies": {
+  "devDependencies": {
     "@murmur/plugins": "workspace:*",
     "@murmur/rag": "workspace:*",
-    "@murmur/shared": "workspace:*"
-  },
-  "devDependencies": {
+    "@murmur/shared": "workspace:*",
     "@types/node": "catalog:",
     "tsup": "catalog:",
     "typescript": "catalog:",

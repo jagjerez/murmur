@@ -1,0 +1,61 @@
+/* murmur — variables de diseño. Dark por defecto; light vía [data-theme="light"]
+   o prefers-color-scheme. */
+:root {
+  /* Acento */
+  --mur-accent-50: #fbf0e8;
+  --mur-accent-100: #f4d4c0;
+  --mur-accent-200: #eab497;
+  --mur-accent-400: #e0916b;
+  --mur-accent-600: #cf7350;
+  --mur-accent-700: #b15a3c;
+  --mur-accent-900: #8a4530;
+
+  /* Estados */
+  --mur-state-idle: #9a9088;
+  --mur-state-listening: #e0916b;
+  --mur-state-thinking: #b79be8;
+  --mur-state-speaking: #e6b450;
+  --mur-state-error: #d8584e;
+
+  /* Tipografía */
+  --mur-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mur-font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  /* Radios / motion */
+  --mur-radius-md: 12px;
+  --mur-radius-lg: 18px;
+  --mur-radius-full: 999px;
+  --mur-duration-base: 200ms;
+  --mur-easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Superficies (dark por defecto) */
+  --mur-surface: #16141c;
+  --mur-surface-raised: #241f2b;
+  --mur-text: #f4f1ec;
+  --mur-text-muted: #9a9088;
+  --mur-border: rgba(255, 255, 255, 0.1);
+  --mur-glass: rgba(34, 28, 27, 0.82);
+  --mur-shadow-glass: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme='light'] {
+  --mur-surface: #f3efe9;
+  --mur-surface-raised: #fffdfa;
+  --mur-text: #2a2420;
+  --mur-text-muted: #6a635c;
+  --mur-border: rgba(0, 0, 0, 0.08);
+  --mur-glass: rgba(255, 253, 250, 0.78);
+  --mur-shadow-glass: 0 12px 40px rgba(140, 110, 90, 0.18);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --mur-surface: #f3efe9;
+    --mur-surface-raised: #fffdfa;
+    --mur-text: #2a2420;
+    --mur-text-muted: #6a635c;
+    --mur-border: rgba(0, 0, 0, 0.08);
+    --mur-glass: rgba(255, 253, 250, 0.78);
+    --mur-shadow-glass: 0 12px 40px rgba(140, 110, 90, 0.18);
+  }
+}

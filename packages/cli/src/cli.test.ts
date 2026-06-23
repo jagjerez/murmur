@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createSqliteStore } from '@murmur/rag';
 import { run, VERSION } from './cli';
 import { ConfigStore } from './config';
 
@@ -129,6 +130,26 @@ describe('cli run', () => {
       expect(stdout).not.toContain(key);
       expect(stdout.toLowerCase()).toContain('sí');
     });
+
+    it('sin db de memoria → 0 elementos', async () => {
+      const { stdout, exitCode } = await run(['status'], { config });
+      expect(exitCode).toBe(0);
+      expect(stdout.toLowerCase()).toContain('memoria:');
+      expect(stdout).toContain('0 elementos');
+    });
+
+    it('con items en la db → N elementos', async () => {
+      const dbPath = config.dataPath('memory.db');
+      const store = createSqliteStore(dbPath);
+      await store.memory.add({ id: 'a', type: 'short_term', content: 'uno', createdAt: 1 });
+      await store.memory.add({ id: 'b', type: 'long_term_fact', content: 'dos', createdAt: 2 });
+      store.close();
+
+      const { stdout, exitCode } = await run(['status'], { config });
+      expect(exitCode).toBe(0);
+      expect(stdout.toLowerCase()).toContain('memoria:');
+      expect(stdout).toContain('2 elementos');
+    });
   });
 
   describe('start', () => {
@@ -146,27 +167,42 @@ describe('cli run', () => {
   });
 
   describe('memory reset', () => {
-    it('sin --yes no borra el memory.db y exitCode 0', async () => {
+    function seedMemory(): string {
       const dbPath = config.dataPath('memory.db');
-      writeFileSync(dbPath, 'dummy', 'utf8');
+      const store = createSqliteStore(dbPath);
+      // de forma síncrona para el seed del test
+      void store.memory.add({ id: 'a', type: 'short_term', content: 'uno', createdAt: 1 });
+      void store.memory.add({ id: 'b', type: 'short_term', content: 'dos', createdAt: 2 });
+      store.close();
+      return dbPath;
+    }
+
+    it('sin --yes conserva la memoria y exitCode 0', async () => {
+      seedMemory();
       const { stdout, exitCode } = await run(['memory', 'reset'], { config });
       expect(exitCode).toBe(0);
-      expect(existsSync(dbPath)).toBe(true);
       expect(stdout).toContain('--yes');
+
+      const status = await run(['status'], { config });
+      expect(status.stdout).toContain('2 elementos');
     });
 
-    it('con --yes borra el memory.db', async () => {
-      const dbPath = config.dataPath('memory.db');
-      writeFileSync(dbPath, 'dummy', 'utf8');
+    it('con --yes deja la memoria vacía (count 0)', async () => {
+      seedMemory();
       const { exitCode } = await run(['memory', 'reset', '--yes'], { config });
       expect(exitCode).toBe(0);
-      expect(existsSync(dbPath)).toBe(false);
+
+      const status = await run(['status'], { config });
+      expect(status.stdout).toContain('0 elementos');
     });
 
-    it('con --yes sin archivo → exitCode 0 e informa que no había nada', async () => {
+    it('con --yes sin db → exitCode 0 e informa', async () => {
       const { stdout, exitCode } = await run(['memory', 'reset', '--yes'], { config });
       expect(exitCode).toBe(0);
       expect(stdout.length).toBeGreaterThan(0);
+      // tras un reset sobre db inexistente, la memoria sigue a 0
+      const status = await run(['status'], { config });
+      expect(status.stdout).toContain('0 elementos');
     });
 
     it('memory subcomando desconocido → exitCode 1', async () => {

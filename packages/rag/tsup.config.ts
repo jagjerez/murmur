@@ -5,7 +5,6 @@ export default defineConfig({
   format: ['esm'],
   dts: true,
   clean: true,
-  noExternal: [/^@murmur\//],
   // tsup elimina por defecto el prefijo `node:` (`node:sqlite` → `sqlite`), que NO resuelve
   // en runtime porque el módulo solo existe como `node:sqlite`. Lo desactivamos.
   removeNodeProtocol: false,

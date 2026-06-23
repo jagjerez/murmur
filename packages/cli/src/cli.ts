@@ -1,12 +1,18 @@
-import { rmSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { ConfigError } from '@murmur/shared';
+import { createSqliteStore, type SqliteStore } from '@murmur/rag';
 import type { ConfigStore, MurmurConfig } from './config';
 
 export const VERSION = '0.1.0';
 
+/** Fábrica del store de persistencia; inyectable en tests. */
+export type StoreFactory = (path: string) => SqliteStore;
+
 export interface CliDeps {
   config: ConfigStore;
   now?: () => number;
+  /** Permite inyectar un store alternativo en tests. Por defecto SQLite real. */
+  storeFactory?: StoreFactory;
 }
 
 export interface CliResult {
@@ -75,7 +81,7 @@ export async function run(argv: string[], deps: CliDeps): Promise<CliResult> {
         return ok(out);
 
       case 'status':
-        return cmdStatus(out, deps);
+        return await cmdStatus(out, deps);
 
       case 'start':
         return cmdStart(out, deps);
@@ -84,7 +90,7 @@ export async function run(argv: string[], deps: CliDeps): Promise<CliResult> {
         return cmdConfig(out, deps, sub, rest);
 
       case 'memory':
-        return cmdMemory(out, deps, sub, rest);
+        return await cmdMemory(out, deps, sub, rest);
 
       default:
         out.line(`murmur: comando desconocido "${command}". Usa "murmur help".`);
@@ -107,8 +113,29 @@ function fail(out: Output): CliResult {
   return { stdout: out.toString(), exitCode: 1 };
 }
 
-function cmdStatus(out: Output, deps: CliDeps): CliResult {
+/** Abre el store SQLite en `path` (factory inyectable, por defecto la real). */
+function openStore(deps: CliDeps, path: string): SqliteStore {
+  const factory = deps.storeFactory ?? createSqliteStore;
+  return factory(path);
+}
+
+/** Cuenta los items de memoria sin crear la db si no existe (devuelve 0). */
+async function memoryCount(deps: CliDeps): Promise<number> {
+  const dbPath = deps.config.dataPath('memory.db');
+  if (!existsSync(dbPath)) {
+    return 0;
+  }
+  const store = openStore(deps, dbPath);
+  try {
+    return await store.memory.count();
+  } finally {
+    store.close();
+  }
+}
+
+async function cmdStatus(out: Output, deps: CliDeps): Promise<CliResult> {
   const config = deps.config.load();
+  const count = await memoryCount(deps);
   out.line(`murmur ${VERSION}`);
   out.line(`Config:   ${deps.config.path()}`);
   out.line(`Datos:    ${deps.config.baseDir()}`);
@@ -117,6 +144,7 @@ function cmdStatus(out: Output, deps: CliDeps): CliResult {
   out.line(`Modelo:   ${config.model}`);
   out.line(`Voz:      ${config.voice}`);
   out.line(`Tema:     ${config.theme}`);
+  out.line(`Memoria:  ${count} ${count === 1 ? 'elemento' : 'elementos'}`);
   return ok(out);
 }
 
@@ -173,7 +201,12 @@ function showConfig(out: Output, config: MurmurConfig): CliResult {
   return ok(out);
 }
 
-function cmdMemory(out: Output, deps: CliDeps, sub: string | undefined, rest: string[]): CliResult {
+async function cmdMemory(
+  out: Output,
+  deps: CliDeps,
+  sub: string | undefined,
+  rest: string[],
+): Promise<CliResult> {
   if (sub !== 'reset') {
     out.line(`murmur: subcomando de memory desconocido "${sub ?? ''}". Usa "murmur help".`);
     return fail(out);
@@ -188,29 +221,19 @@ function cmdMemory(out: Output, deps: CliDeps, sub: string | undefined, rest: st
     return ok(out);
   }
 
-  // TODO(F6): SQLite real; por ahora solo eliminamos el archivo memory.db si existe.
-  let existed = true;
-  try {
-    rmSync(dbPath);
-  } catch (err) {
-    if (isNotFound(err)) {
-      existed = false;
-    } else {
-      throw err;
-    }
+  if (!existsSync(dbPath)) {
+    out.line('murmur: no había memoria local que borrar.');
+    return ok(out);
   }
 
-  out.line(
-    existed ? 'murmur: memoria local borrada.' : 'murmur: no había memoria local que borrar.',
-  );
-  return ok(out);
-}
+  // Borrado real vía el store SQLite: vacía memory_items, sessions y messages.
+  const store = openStore(deps, dbPath);
+  try {
+    await store.reset();
+  } finally {
+    store.close();
+  }
 
-function isNotFound(err: unknown): boolean {
-  return (
-    typeof err === 'object' &&
-    err !== null &&
-    'code' in err &&
-    (err as { code?: unknown }).code === 'ENOENT'
-  );
+  out.line('murmur: memoria local borrada.');
+  return ok(out);
 }

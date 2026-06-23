@@ -191,7 +191,13 @@ export class ConfigStore {
       );
     }
 
-    return this.save({ wakeWord: normalizeWakeWord(merged) });
+    // Ya validado arriba: aquí sólo normalizamos la frase y aseguramos el rango de sensibilidad.
+    const next: WakeWordConfig = {
+      enabled: merged.enabled,
+      phrase: normalizePhrase(merged.phrase),
+      sensitivity: Math.min(1, Math.max(0, merged.sensitivity)),
+    };
+    return this.save({ wakeWord: next });
   }
 }
 

@@ -5,6 +5,12 @@ import { ConfigError } from '@murmur/shared';
 
 export type Theme = 'system' | 'dark' | 'light';
 
+/**
+ * Modo de transcripción (mismo enum que `@murmur/core` / F0). Se replica aquí
+ * para no acoplar el paquete `cli` a `@murmur/core` solo por un tipo.
+ */
+export type TranscriptionMode = 'realtime' | 'whisper-api' | 'local-whisper';
+
 /** Controles de privacidad del usuario. Todos con defaults conservadores. */
 export interface PrivacyConfig {
   /** Si `true`, el orchestrator no inyecta contexto RAG en el prompt. */
@@ -23,6 +29,8 @@ export interface MurmurConfig {
   model: string;
   voice: string;
   theme: Theme;
+  /** Modo de transcripción a usar (default `realtime`). */
+  transcription: TranscriptionMode;
   privacy: PrivacyConfig;
 }
 
@@ -38,11 +46,22 @@ export const DEFAULT_CONFIG: Omit<MurmurConfig, 'openaiApiKey'> = {
   model: 'gpt-realtime',
   voice: 'alloy',
   theme: 'system',
+  transcription: 'realtime',
   privacy: DEFAULT_PRIVACY,
 };
 
 const CONFIG_FILE = 'config.json';
 const VALID_THEMES: readonly Theme[] = ['system', 'dark', 'light'];
+export const VALID_TRANSCRIPTION_MODES: readonly TranscriptionMode[] = [
+  'realtime',
+  'whisper-api',
+  'local-whisper',
+];
+
+/** `true` si `value` es un `TranscriptionMode` válido. */
+export function isTranscriptionMode(value: string): value is TranscriptionMode {
+  return (VALID_TRANSCRIPTION_MODES as readonly string[]).includes(value);
+}
 
 /** Persistencia de la configuración de murmur en `<base>/config.json`. */
 export class ConfigStore {
@@ -116,6 +135,16 @@ export class ConfigStore {
     return this.save({ openaiApiKey: key });
   }
 
+  /** Fija el modo de transcripción (valida el enum) y lo persiste. */
+  setTranscription(mode: TranscriptionMode): MurmurConfig {
+    if (!isTranscriptionMode(mode)) {
+      throw new ConfigError(
+        `Modo de transcripción inválido "${String(mode)}" (usa: ${VALID_TRANSCRIPTION_MODES.join(', ')}).`,
+      );
+    }
+    return this.save({ transcription: mode });
+  }
+
   /** Combina `patch` sobre la privacidad actual (normalizada) y la persiste. */
   setPrivacy(patch: Partial<PrivacyConfig>): MurmurConfig {
     const current = this.load().privacy;
@@ -151,6 +180,9 @@ function normalize(raw: Record<string, unknown>): MurmurConfig {
   }
   if (typeof raw.theme === 'string' && (VALID_THEMES as readonly string[]).includes(raw.theme)) {
     config.theme = raw.theme as Theme;
+  }
+  if (typeof raw.transcription === 'string' && isTranscriptionMode(raw.transcription)) {
+    config.transcription = raw.transcription;
   }
   if (raw.privacy !== null && typeof raw.privacy === 'object' && !Array.isArray(raw.privacy)) {
     config.privacy = normalizePrivacy(raw.privacy as Record<string, unknown>);

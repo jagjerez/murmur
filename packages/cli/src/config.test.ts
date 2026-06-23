@@ -149,4 +149,44 @@ describe('ConfigStore', () => {
       expect(new ConfigStore(baseDir).load().privacy.retentionDays).toBe(0);
     });
   });
+
+  describe('transcription', () => {
+    it('default es realtime', () => {
+      const store = new ConfigStore(baseDir);
+      expect(store.load().transcription).toBe('realtime');
+      expect(DEFAULT_CONFIG.transcription).toBe('realtime');
+    });
+
+    it('setTranscription persiste un modo válido', () => {
+      const store = new ConfigStore(baseDir);
+      store.setTranscription('whisper-api');
+      expect(new ConfigStore(baseDir).load().transcription).toBe('whisper-api');
+    });
+
+    it('setTranscription con modo inválido → ConfigError y no persiste', () => {
+      const store = new ConfigStore(baseDir);
+      expect(() => store.setTranscription('foo' as never)).toThrow(ConfigError);
+      expect(new ConfigStore(baseDir).load().transcription).toBe('realtime');
+    });
+
+    it('normaliza un transcription válido del JSON', () => {
+      mkdirSync(baseDir, { recursive: true });
+      writeFileSync(
+        join(baseDir, 'config.json'),
+        JSON.stringify({ transcription: 'local-whisper' }),
+        'utf8',
+      );
+      expect(new ConfigStore(baseDir).load().transcription).toBe('local-whisper');
+    });
+
+    it('descarta transcription inválido del JSON y usa default', () => {
+      mkdirSync(baseDir, { recursive: true });
+      writeFileSync(
+        join(baseDir, 'config.json'),
+        JSON.stringify({ transcription: 'no-existe' }),
+        'utf8',
+      );
+      expect(new ConfigStore(baseDir).load().transcription).toBe('realtime');
+    });
+  });
 });

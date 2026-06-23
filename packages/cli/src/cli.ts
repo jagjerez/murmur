@@ -2,7 +2,13 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { ConfigError } from '@murmur/shared';
 import { createSqliteStore, type SqliteStore } from '@murmur/rag';
-import type { ConfigStore, MurmurConfig, PrivacyConfig } from './config';
+import {
+  isTranscriptionMode,
+  VALID_TRANSCRIPTION_MODES,
+  type ConfigStore,
+  type MurmurConfig,
+  type PrivacyConfig,
+} from './config';
 
 export const VERSION = '0.1.0';
 
@@ -52,6 +58,9 @@ Comandos:
   config                         Muestra la configuración actual (API key redactada)
   config set-openai-key <key>    Guarda la API key de OpenAI
   config set-hotkey <combo>      Guarda el atajo de teclado global
+  config set-transcription <modo>
+                                 Fija el modo de transcripción (realtime,
+                                 whisper-api, local-whisper)
   config set-privacy <campo> <valor>
                                  Cambia un flag de privacidad (localOnlyMode,
                                  storeTranscripts, redactBeforeStore, retentionDays)
@@ -153,6 +162,7 @@ async function cmdStatus(out: Output, deps: CliDeps): Promise<CliResult> {
   out.line(`Modelo:   ${config.model}`);
   out.line(`Voz:      ${config.voice}`);
   out.line(`Tema:     ${config.theme}`);
+  out.line(`Transcripción: ${config.transcription}`);
   out.line(`Memoria:  ${count} ${count === 1 ? 'elemento' : 'elementos'}`);
   return ok(out);
 }
@@ -192,6 +202,23 @@ function cmdConfig(out: Output, deps: CliDeps, sub: string | undefined, rest: st
       }
       const saved = deps.config.save({ hotkey: combo });
       out.line(`murmur: atajo guardado (${saved.hotkey}).`);
+      return ok(out);
+    }
+
+    case 'set-transcription': {
+      const mode = rest[0];
+      if (!mode) {
+        out.line('murmur: indica el modo: murmur config set-transcription <modo>.');
+        out.line(`  Modos válidos: ${VALID_TRANSCRIPTION_MODES.join(', ')}.`);
+        return fail(out);
+      }
+      if (!isTranscriptionMode(mode)) {
+        out.line(`murmur: modo de transcripción inválido "${mode}".`);
+        out.line(`  Modos válidos: ${VALID_TRANSCRIPTION_MODES.join(', ')}.`);
+        return fail(out);
+      }
+      const saved = deps.config.setTranscription(mode);
+      out.line(`murmur: modo de transcripción guardado (${saved.transcription}).`);
       return ok(out);
     }
 
@@ -259,6 +286,7 @@ function showConfig(out: Output, config: MurmurConfig): CliResult {
   out.line(`Modelo:   ${config.model}`);
   out.line(`Voz:      ${config.voice}`);
   out.line(`Tema:     ${config.theme}`);
+  out.line(`Transcripción: ${config.transcription}`);
   out.line('Privacidad:');
   out.line(`  Modo local:        ${config.privacy.localOnlyMode ? 'sí' : 'no'}`);
   out.line(`  Guardar transcripciones: ${config.privacy.storeTranscripts ? 'sí' : 'no'}`);

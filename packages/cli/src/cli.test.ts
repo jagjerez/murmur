@@ -113,6 +113,41 @@ describe('cli run', () => {
     });
   });
 
+  describe('config set-transcription', () => {
+    it('persiste el modo y config lo refleja', async () => {
+      const setRes = await run(['config', 'set-transcription', 'whisper-api'], { config });
+      expect(setRes.exitCode).toBe(0);
+      expect(config.load().transcription).toBe('whisper-api');
+
+      const { stdout } = await run(['config'], { config });
+      expect(stdout).toContain('whisper-api');
+    });
+
+    it('modo inválido → exitCode 1 y no persiste', async () => {
+      const { exitCode } = await run(['config', 'set-transcription', 'foo'], { config });
+      expect(exitCode).toBe(1);
+      expect(config.load().transcription).toBe('realtime');
+    });
+
+    it('sin argumento → exitCode 1', async () => {
+      const { exitCode } = await run(['config', 'set-transcription'], { config });
+      expect(exitCode).toBe(1);
+    });
+
+    it('config muestra el modo por defecto realtime', async () => {
+      const { stdout } = await run(['config'], { config });
+      expect(stdout.toLowerCase()).toContain('transcrip');
+      expect(stdout).toContain('realtime');
+    });
+
+    it('status muestra el modo de transcripción', async () => {
+      config.setTranscription('local-whisper');
+      const { stdout } = await run(['status'], { config });
+      expect(stdout.toLowerCase()).toContain('transcrip');
+      expect(stdout).toContain('local-whisper');
+    });
+  });
+
   describe('status', () => {
     it('sin key → no configurada, incluye versión y rutas', async () => {
       const { stdout, exitCode } = await run(['status'], { config });

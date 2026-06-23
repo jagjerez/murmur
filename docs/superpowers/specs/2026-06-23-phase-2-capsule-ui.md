@@ -19,18 +19,18 @@ desarrollo que permite recorrer los estados.
 
 ## 2. Decisiones confirmadas
 
-| Tema | Decisión |
-| ---- | -------- |
-| Lógica vs vista | Lógica pura en `src/capsule/*.ts` (visual, interacción, anclaje), testeada sin DOM. El componente `Capsule.tsx` es glue fino. |
-| Animaciones | CSS keyframes en `styles.css`: `breathe` (listening), `pulse` (thinking), `equalize` (speaking, barras EQ), `shake` (error), reposo sin animación (idle). Respetar `prefers-reduced-motion: reduce` (desactiva/atenúa). |
-| Ecualizador | Componente `Waveform` con N barras animadas; es el foco visual. Activo/intenso en `listening` y `speaking`; quieto en idle/thinking/error. |
-| Arrastre | Atributo `data-tauri-drag-region` en el contenedor (nativo en Tauri; no-op en navegador/dev). |
-| Anclaje | Función pura `anchorStyle(anchor)` → CSS de posición. Anclas: `bottom-center` (default), `top-left`, `top-right`, `bottom-left`, `bottom-right`. (La colocación real de la ventana nativa es F11; aquí es layout dentro del viewport.) |
-| Interacción | `mode: 'push-to-talk' \| 'toggle'`. Reductor puro `nextCapture(mode, capturing, event)` con eventos `press`/`release`/`cancel`. PTT: press→capturando (listening), release→fin (thinking). Toggle: press alterna listening/idle. El pipeline completo es F9. |
-| Estado | Hook `useCapsule()` (`useReducer`) con `{ state, mode, anchor }` y acciones (`setState`, `setMode`, `setAnchor`, `press`, `release`). |
-| Tema | `data-theme` en `<html>` (ya soportado por `tokens.css`) + `prefers-color-scheme`. El panel dev permite forzar dark/light/system. |
-| Tests UI | Añadir Vitest + jsdom + `@testing-library/react` + `@testing-library/jest-dom` a `apps/desktop`. `vite.config.ts` con `test` (entorno jsdom, setup jest-dom). Script `test: "vitest run"` → entra en `pnpm -r test`. |
-| Tauri | Fijar `security.csp` a un valor sano (cerrar `TODO(F2)`); mantener ventana transparente, sin decoración, always-on-top, 420×120. |
+| Tema            | Decisión                                                                                                                                                                                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Lógica vs vista | Lógica pura en `src/capsule/*.ts` (visual, interacción, anclaje), testeada sin DOM. El componente `Capsule.tsx` es glue fino.                                                                                                                                |
+| Animaciones     | CSS keyframes en `styles.css`: `breathe` (listening), `pulse` (thinking), `equalize` (speaking, barras EQ), `shake` (error), reposo sin animación (idle). Respetar `prefers-reduced-motion: reduce` (desactiva/atenúa).                                      |
+| Ecualizador     | Componente `Waveform` con N barras animadas; es el foco visual. Activo/intenso en `listening` y `speaking`; quieto en idle/thinking/error.                                                                                                                   |
+| Arrastre        | Atributo `data-tauri-drag-region` en el contenedor (nativo en Tauri; no-op en navegador/dev).                                                                                                                                                                |
+| Anclaje         | Función pura `anchorStyle(anchor)` → CSS de posición. Anclas: `bottom-center` (default), `top-left`, `top-right`, `bottom-left`, `bottom-right`. (La colocación real de la ventana nativa es F11; aquí es layout dentro del viewport.)                       |
+| Interacción     | `mode: 'push-to-talk' \| 'toggle'`. Reductor puro `nextCapture(mode, capturing, event)` con eventos `press`/`release`/`cancel`. PTT: press→capturando (listening), release→fin (thinking). Toggle: press alterna listening/idle. El pipeline completo es F9. |
+| Estado          | Hook `useCapsule()` (`useReducer`) con `{ state, mode, anchor }` y acciones (`setState`, `setMode`, `setAnchor`, `press`, `release`).                                                                                                                        |
+| Tema            | `data-theme` en `<html>` (ya soportado por `tokens.css`) + `prefers-color-scheme`. El panel dev permite forzar dark/light/system.                                                                                                                            |
+| Tests UI        | Añadir Vitest + jsdom + `@testing-library/react` + `@testing-library/jest-dom` a `apps/desktop`. `vite.config.ts` con `test` (entorno jsdom, setup jest-dom). Script `test: "vitest run"` → entra en `pnpm -r test`.                                         |
+| Tauri           | Fijar `security.csp` a un valor sano (cerrar `TODO(F2)`); mantener ventana transparente, sin decoración, always-on-top, 420×120.                                                                                                                             |
 
 ## 3. Superficie y comportamiento
 
@@ -53,6 +53,7 @@ desarrollo que permite recorrer los estados.
 ## 4. Entregables
 
 Código:
+
 - `src/capsule/visual.ts` — `deriveVisual(state)` → `{ color, animation, label, showEq }`.
 - `src/capsule/interaction.ts` — `nextCapture(mode, capturing, event)` y tipos.
 - `src/capsule/anchor.ts` — `ANCHORS`, `anchorStyle(anchor)`.
@@ -68,6 +69,7 @@ Código:
 - `src-tauri/tauri.conf.json` — `csp` definido.
 
 Tests:
+
 - `visual.test.ts`, `interaction.test.ts`, `anchor.test.ts` (puros).
 - `Capsule.test.tsx` (RTL): por cada estado, el color/clase de animación y `aria-label`
   correctos; EQ presente en listening/speaking; en toggle `aria-pressed` cambia al pulsar.

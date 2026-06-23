@@ -50,7 +50,5 @@ export function nextCapture(
       : { capturing: true, state: 'listening' };
   }
   // release: mantiene el estado actual del toggle
-  return capturing
-    ? { capturing: true, state: 'listening' }
-    : { capturing: false, state: 'idle' };
+  return capturing ? { capturing: true, state: 'listening' } : { capturing: false, state: 'idle' };
 }

@@ -19,12 +19,12 @@ mockeados); sin deps nuevas (`globalThis.fetch`/`FormData`/`Blob`). NO toques `P
 **Files:** `packages/core/src/providers/whisper.ts` (+ `whisper.test.ts`), export en `index.ts`.
 
 - [ ] `createOpenAIWhisperProvider({ apiKey, model?, fetchFn?, format? })` (mode `'whisper-api'`):
-  POST `/v1/audio/transcriptions`, `Authorization: Bearer`, `FormData` con `file` (Blob) + `model`
-  (default `whisper-1`); parsea `{ text }`; error → `ModelError`; key no logueada.
+      POST `/v1/audio/transcriptions`, `Authorization: Bearer`, `FormData` con `file` (Blob) + `model`
+      (default `whisper-1`); parsea `{ text }`; error → `ModelError`; key no logueada.
 - [ ] `createLocalWhisperProvider({ run })` (mode `'local-whisper'`): delega en `run(audio)`; sin `run` → error.
 - [ ] `createMockTranscriptionProvider(text, mode?)`. `selectTranscriptionProvider(mode, deps)`.
 - [ ] Tests (fallan→pasan): OpenAI con `fetchFn` mock (verifica URL/headers/FormData/parseo; error→`ModelError`;
-  key no logueada); local con `run` mock; mock provider; selector elige correctamente; `'realtime'` documentado.
+      key no logueada); local con `run` mock; mock provider; selector elige correctamente; `'realtime'` documentado.
 - [ ] Export en `index.ts`. Commit: `feat(core): TranscriptionProvider whisper-api/local/mock + selector`.
 
 ## Task 2: Config de transcripción (`@murmur/cli`)
@@ -32,9 +32,9 @@ mockeados); sin deps nuevas (`globalThis.fetch`/`FormData`/`Blob`). NO toques `P
 **Files:** `packages/cli/src/config.ts`, `packages/cli/src/cli.ts` (+ tests).
 
 - [ ] `MurmurConfig.transcription: TranscriptionMode` (default `'realtime'`), normalizada/validada en
-  `ConfigStore`; `config set-transcription <mode>` (valida enum); `config`/`status` la muestran.
+      `ConfigStore`; `config set-transcription <mode>` (valida enum); `config`/`status` la muestran.
 - [ ] Tests (fallan→pasan): default `'realtime'`; `set-transcription whisper-api` persiste; valor
-  inválido → error/exitCode≠0; `config` lo refleja.
+      inválido → error/exitCode≠0; `config` lo refleja.
 - [ ] Commit: `feat(cli): config de modo de transcripción`.
 
 ## Task 3: Verificación de fase

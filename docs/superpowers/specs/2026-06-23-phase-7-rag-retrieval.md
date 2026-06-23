@@ -17,15 +17,15 @@ brief, pero la infraestructura se construye aquí.
 
 ## 2. Decisiones confirmadas
 
-| Tema | Decisión |
-| ---- | -------- |
+| Tema            | Decisión                                                                                                                                                                                                                                                                                                                                                        |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Provider OpenAI | `createOpenAIEmbeddingProvider({ apiKey, model?, fetchFn? })`. Endpoint `POST https://api.openai.com/v1/embeddings`, header `Authorization: Bearer <key>`, body `{ model, input: string[] }`. Modelo por defecto `text-embedding-3-small`. `fetchFn` inyectable (default `globalThis.fetch`, Node 26). Error HTTP/parse → `ModelError`. La key nunca se loguea. |
-| Provider mock | `createMockEmbeddingProvider({ dim? })`: vector **determinista** y normalizado derivado del texto (hash estable de tokens). Mismo texto → mismo vector; textos similares comparten componentes. Para tests y modo offline. |
-| Vectores | `vector.ts`: `cosineSimilarity(a, b)`, y serialización `float32ToBytes`/`bytesToFloat32` (Float32 LE ↔ `Uint8Array`) para guardar en BLOB. Puro. |
-| Almacenamiento | Tabla `embeddings(memory_item_id TEXT PK REFERENCES memory_items(id) ON DELETE CASCADE, model TEXT, dim INTEGER, vector BLOB)`. Migración a `user_version = 2`, idempotente y preserva datos. |
-| API del store | El store de F6 expone además: `upsertEmbedding(memoryItemId, vector, model)`, `getEmbedding(id)`, `allEmbeddings(model?)` → `{ id, vector }[]`. |
-| Retriever | `createSqliteRagRetriever({ store, embeddings, model? })` → `RagRetriever`. `index(item)` = `store.memory.add(item)` + `embed(content)` + `upsertEmbedding`. `retrieve(query, { limit })` = embed query → cosine contra `allEmbeddings(model)` → top-k → `MemoryItem[]` (orden desc por score). `retrieveScored(query, opts)` opcional → `{ item, score }[]`. |
-| Determinismo | Tests con el mock determinista; el ranking es predecible. Sin red. |
+| Provider mock   | `createMockEmbeddingProvider({ dim? })`: vector **determinista** y normalizado derivado del texto (hash estable de tokens). Mismo texto → mismo vector; textos similares comparten componentes. Para tests y modo offline.                                                                                                                                      |
+| Vectores        | `vector.ts`: `cosineSimilarity(a, b)`, y serialización `float32ToBytes`/`bytesToFloat32` (Float32 LE ↔ `Uint8Array`) para guardar en BLOB. Puro.                                                                                                                                                                                                                |
+| Almacenamiento  | Tabla `embeddings(memory_item_id TEXT PK REFERENCES memory_items(id) ON DELETE CASCADE, model TEXT, dim INTEGER, vector BLOB)`. Migración a `user_version = 2`, idempotente y preserva datos.                                                                                                                                                                   |
+| API del store   | El store de F6 expone además: `upsertEmbedding(memoryItemId, vector, model)`, `getEmbedding(id)`, `allEmbeddings(model?)` → `{ id, vector }[]`.                                                                                                                                                                                                                 |
+| Retriever       | `createSqliteRagRetriever({ store, embeddings, model? })` → `RagRetriever`. `index(item)` = `store.memory.add(item)` + `embed(content)` + `upsertEmbedding`. `retrieve(query, { limit })` = embed query → cosine contra `allEmbeddings(model)` → top-k → `MemoryItem[]` (orden desc por score). `retrieveScored(query, opts)` opcional → `{ item, score }[]`.   |
+| Determinismo    | Tests con el mock determinista; el ranking es predecible. Sin red.                                                                                                                                                                                                                                                                                              |
 
 ## 3. Entregables
 

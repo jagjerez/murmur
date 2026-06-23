@@ -19,7 +19,7 @@
 **Files:** `packages/rag/src/vector.ts` (+ `vector.test.ts`).
 
 - [ ] Tests (fallan): `cosineSimilarity` idénticos→1, ortogonales→0, opuestos→−1; longitudes
-  distintas → error o 0 (decide y documenta). `float32ToBytes`/`bytesToFloat32` round-trip exacto.
+      distintas → error o 0 (decide y documenta). `float32ToBytes`/`bytesToFloat32` round-trip exacto.
 - [ ] Implementar (Float32Array/DataView). Commit: `feat(rag): utilidades de vector (coseno + serde)`.
 
 ## Task 2: Providers de embedding (`embeddings.ts`)
@@ -27,12 +27,12 @@
 **Files:** `packages/rag/src/embeddings.ts` (+ `embeddings.test.ts`), export en `index.ts`.
 
 - [ ] `createMockEmbeddingProvider({ dim? })`: determinista (hash estable de tokens → vector
-  normalizado de `dim` dims, default p. ej. 64). `createOpenAIEmbeddingProvider({ apiKey, model?, fetchFn? })`:
-  POST a `/v1/embeddings`, `Authorization: Bearer`, body `{model, input}`, parsea `data[].embedding`;
-  error → `ModelError`.
+      normalizado de `dim` dims, default p. ej. 64). `createOpenAIEmbeddingProvider({ apiKey, model?, fetchFn? })`:
+      POST a `/v1/embeddings`, `Authorization: Bearer`, body `{model, input}`, parsea `data[].embedding`;
+      error → `ModelError`.
 - [ ] Tests (fallan→pasan): mock determinista (mismo texto→mismo vector, normalizado; distinto→distinto);
-  OpenAI con `fetchFn` mock: verifica URL/headers/body y parseo; respuesta de error → `ModelError`;
-  la key no aparece en ningún log. 
+      OpenAI con `fetchFn` mock: verifica URL/headers/body y parseo; respuesta de error → `ModelError`;
+      la key no aparece en ningún log.
 - [ ] Commit: `feat(rag): EmbeddingProvider OpenAI + mock determinista`.
 
 ## Task 3: Almacenamiento de vectores (extensión del store SQLite)
@@ -41,11 +41,11 @@
 o ampliar `memory-store.ts`/`index.ts` (+ tests).
 
 - [ ] Migración: `embeddings(memory_item_id PK FK ON DELETE CASCADE, model, dim, vector BLOB)`;
-  `user_version = 2`; idempotente; preserva datos de v1. 
+      `user_version = 2`; idempotente; preserva datos de v1.
 - [ ] Métodos en el store: `upsertEmbedding(id, vector, model)`, `getEmbedding(id)`,
-  `allEmbeddings(model?)` → `{ id, vector: Float32Array }[]`. `createSqliteStore` los expone.
+      `allEmbeddings(model?)` → `{ id, vector: Float32Array }[]`. `createSqliteStore` los expone.
 - [ ] Tests (fallan→pasan): upsert/get/all; cascade (borrar memory item borra embedding); migración
-  v2 sobre una db v1 con datos conserva los datos y añade la tabla.
+      v2 sobre una db v1 con datos conserva los datos y añade la tabla.
 - [ ] Commit: `feat(rag): almacenamiento de embeddings en SQLite (migración v2)`.
 
 ## Task 4: `SqliteRagRetriever` (`retriever.ts`)
@@ -53,11 +53,11 @@ o ampliar `memory-store.ts`/`index.ts` (+ tests).
 **Files:** `packages/rag/src/sqlite/retriever.ts` (+ `retriever.test.ts`), export en `index.ts`.
 
 - [ ] `createSqliteRagRetriever({ store, embeddings, model? })` → `RagRetriever`:
-  `index(item)` añade el item y guarda su embedding; `retrieve(query, { limit })` embebe la query,
-  puntúa coseno contra `allEmbeddings(model)`, ordena desc y devuelve los `MemoryItem` top-k;
-  `retrieveScored` opcional con `{ item, score }`.
+      `index(item)` añade el item y guarda su embedding; `retrieve(query, { limit })` embebe la query,
+      puntúa coseno contra `allEmbeddings(model)`, ordena desc y devuelve los `MemoryItem` top-k;
+      `retrieveScored` opcional con `{ item, score }`.
 - [ ] Tests (fallan→pasan): indexar 3–4 items, `retrieve` devuelve el más similar primero y respeta
-  `limit`; query sin coincidencias devuelve [] o los menos disímiles (documenta); usa el mock.
+      `limit`; query sin coincidencias devuelve [] o los menos disímiles (documenta); usa el mock.
 - [ ] Export en `index.ts`. Commit: `feat(rag): SqliteRagRetriever por similitud coseno`.
 
 ## Task 5: Verificación de fase

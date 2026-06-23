@@ -20,9 +20,9 @@ en tests. NO toques `docs/superpowers/PROGRESS.md` ni nada fuera del repo (lo ll
 **Files:** `packages/core/src/orchestrator.ts`, `packages/core/src/orchestrator.test.ts`.
 
 - [ ] `interrupt()` limpia `assistantBuffer` (no persistir respuesta cancelada tras barge-in). Test:
-  emitir transcript parcial → `interrupt()` → emitir `idle` → NO se persiste mensaje de asistente.
+      emitir transcript parcial → `interrupt()` → emitir `idle` → NO se persiste mensaje de asistente.
 - [ ] Encadenar/await la promesa de `playback` anterior antes de reasignar en multi-turno (evitar
-  rechazos sin manejar). Documentar el contrato fire-and-forget de `startListening` (JSDoc).
+      rechazos sin manejar). Documentar el contrato fire-and-forget de `startListening` (JSDoc).
 - [ ] `pnpm --filter @murmur/core test` verde. Commit: `fix(core): robustez del orchestrator (interrupt/playback/doc)`.
 
 ## Task 2: `ConfigClient` (`apps/desktop/src/config/config-client.ts`)
@@ -30,9 +30,9 @@ en tests. NO toques `docs/superpowers/PROGRESS.md` ni nada fuera del repo (lo ll
 **Files:** `apps/desktop/src/config/config-client.ts` (+ test), comandos Rust en `src-tauri`.
 
 - [ ] Interfaz `ConfigClient` (ver spec §2) + `createMockConfigClient(initial?)` (en memoria; key
-  redactada en `get`) + `createTauriConfigClient()` (invoca `get_config`/`set_*`; degrada fuera de Tauri).
+      redactada en `get`) + `createTauriConfigClient()` (invoca `get_config`/`set_*`; degrada fuera de Tauri).
 - [ ] Rust: comandos `get_config`/`set_config`/`set_openai_key` en `src-tauri/src/` + registro +
-  capacidad. Documentar que la build nativa no se ejecuta aquí.
+      capacidad. Documentar que la build nativa no se ejecuta aquí.
 - [ ] Tests (mock): `setOpenAiKey` → `hasApiKey` true sin exponer la key; setters persisten.
 - [ ] Commit: `feat(desktop): ConfigClient (mock + Tauri) y comandos de config`.
 
@@ -41,9 +41,9 @@ en tests. NO toques `docs/superpowers/PROGRESS.md` ni nada fuera del repo (lo ll
 **Files:** `apps/desktop/src/components/{Onboarding,Settings,ErrorState,Transcript}.tsx` (+ tests RTL), estilos.
 
 - [ ] `Onboarding`: pasos bienvenida→API key→permiso micro (`getUserMedia` mockeado, maneja denegado)→
-  hotkey (valida con `parseAccelerator`)→listo; guarda vía `ConfigClient`; accesible.
+      hotkey (valida con `parseAccelerator`)→listo; guarda vía `ConfigClient`; accesible.
 - [ ] `Settings`: micrófono (lista vía device manager inyectable), voz, modelo, hotkey (validado), tema
-  (`data-theme`), estado de conexión; persiste vía `ConfigClient`.
+      (`data-theme`), estado de conexión; persiste vía `ConfigClient`.
 - [ ] `ErrorState`: enum `no-api-key|no-mic|no-network|mic-denied` → mensaje + acción de recuperación.
 - [ ] `Transcript`: líneas usuario/asistente con `aria-live`, alternable.
 - [ ] Tests RTL para cada uno (ver criterios §4). Commit: `feat(desktop): onboarding, ajustes, estados de error y transcripción`.
@@ -53,12 +53,12 @@ en tests. NO toques `docs/superpowers/PROGRESS.md` ni nada fuera del repo (lo ll
 **Files:** `apps/desktop/src/use-murmur.ts` (+ test), `apps/desktop/src/App.tsx`, estilos.
 
 - [ ] `useMurmur(deps)`: construye/inyecta `ConversationOrchestrator` (con Web audio o mocks),
-  `RealtimeModelProvider`, `ConfigClient`, `HotkeyManager`; expone estado de la cápsula, transcripts,
-  conexión, y acciones (start/stop captura). Todo inyectable; default a impls reales, mocks en tests.
+      `RealtimeModelProvider`, `ConfigClient`, `HotkeyManager`; expone estado de la cápsula, transcripts,
+      conexión, y acciones (start/stop captura). Todo inyectable; default a impls reales, mocks en tests.
 - [ ] `App.tsx`: shell — sin API key → `Onboarding`; con API key → cápsula + acceso a `Settings`;
-  el hotkey dispara captura; la cápsula refleja `onStateChange`; `Transcript` opcional.
+      el hotkey dispara captura; la cápsula refleja `onStateChange`; `Transcript` opcional.
 - [ ] Tests RTL: sin key → onboarding; con key (mock config) → cápsula; `hotkey.trigger` → captura;
-  estado del orchestrator → estado de la cápsula. Los tests previos (cápsula/hotkey/audio) siguen verdes.
+      estado del orchestrator → estado de la cápsula. Los tests previos (cápsula/hotkey/audio) siguen verdes.
 - [ ] Commit: `feat(desktop): controlador useMurmur y shell de la app`.
 
 ## Task 5: Verificación de fase

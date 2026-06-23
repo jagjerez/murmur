@@ -1,0 +1,117 @@
+# Plantilla de release (NO se ejecuta sin secretos).
+#
+# Se dispara al empujar un tag `vX.Y.Z`. Construye los bundles nativos de Tauri por
+# plataforma y publica el CLI `murmur` en npm. Requiere secretos configurados en el repo:
+#   - NPM_TOKEN          token de publicación de npm (CLI publish)
+#   - TAURI_SIGNING_*    claves de firma/updater de Tauri (opcional, para firmar binarios)
+#
+# La build nativa de Tauri queda fuera del CI por defecto (necesita deps de sistema del
+# webview). Esta plantilla documenta cómo producir una release real.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Bundles de la app de escritorio (Tauri) por plataforma.
+  # ---------------------------------------------------------------------------
+  desktop:
+    name: Desktop bundle (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+          - platform: ubuntu-latest
+          - platform: windows-latest
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      # Dependencias de sistema del webview (solo Linux).
+      - name: Install Linux webview deps
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            build-essential \
+            libssl-dev
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Genera los iconos por plataforma a partir del SVG fuente.
+      - name: Generate icons
+        working-directory: apps/desktop
+        run: pnpm tauri icon src-tauri/icons/icon.svg
+
+      - name: Build Tauri bundles
+        working-directory: apps/desktop
+        env:
+          # Firma opcional; sin estos secretos se construye sin firmar.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: pnpm tauri build
+
+      - name: Upload bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: murmur-${{ matrix.platform }}
+          path: |
+            apps/desktop/src-tauri/target/release/bundle/**
+
+  # ---------------------------------------------------------------------------
+  # Publicación del CLI `murmur` en npm.
+  # ---------------------------------------------------------------------------
+  publish-cli:
+    name: Publish CLI to npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build CLI
+        run: pnpm --filter murmur build
+
+      # `prepublishOnly` reconstruye el bundle; `--access public` publica el paquete.
+      - name: Publish
+        working-directory: packages/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public

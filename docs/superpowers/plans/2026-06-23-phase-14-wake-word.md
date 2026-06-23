@@ -19,10 +19,10 @@ NO toques `docs/superpowers/PROGRESS.md`.
 **Files:** `packages/native/src/wakeword.rs`, `packages/native/src/lib.rs` (`mod wakeword;`).
 
 - [ ] `RingBuffer` (push/len/iter, capacidad fija), `frame_energy(&[i16]) -> f32`,
-  `normalize_phrase(&str) -> String` (lowercase/trim/colapso de espacios), `WakeWordGate { sensitivity }`
-  con `evaluate(score: f32, energy: f32) -> bool` (dispara si `score >= sensitivity` y energía > umbral).
+      `normalize_phrase(&str) -> String` (lowercase/trim/colapso de espacios), `WakeWordGate { sensitivity }`
+      con `evaluate(score: f32, energy: f32) -> bool` (dispara si `score >= sensitivity` y energía > umbral).
 - [ ] `#[cfg(test)] mod tests`: ring buffer (wrap-around), energía (señal conocida), normalización,
-  gate (umbral/sensibilidad/energía baja no dispara). 
+      gate (umbral/sensibilidad/energía baja no dispara).
 - [ ] `cd packages/native && cargo test` verde. Commit: `feat(native): lógica de wake word (ring buffer, energía, gate)`.
 
 ## Task 2: `WakeWordDetector` (`@murmur/core/src/wake-word.ts`)
@@ -30,9 +30,9 @@ NO toques `docs/superpowers/PROGRESS.md`.
 **Files:** `packages/core/src/wake-word.ts` (+ test), export en `index.ts`.
 
 - [ ] `WakeWordDetector` (interfaz), `createMockWakeWordDetector()` (`start(onDetected)`,
-  `triggerDetection()`, `stop()`, `enabled`), `createNullWakeWordDetector()` (no-op).
+      `triggerDetection()`, `stop()`, `enabled`), `createNullWakeWordDetector()` (no-op).
 - [ ] Tests (fallan→pasan): mock `start`+`triggerDetection`→llama `onDetected`; `stop` lo desactiva
-  (trigger ya no llama); null no hace nada.
+      (trigger ya no llama); null no hace nada.
 - [ ] Commit: `feat(core): WakeWordDetector + mock + null`.
 
 ## Task 3: Config de wake word (`@murmur/cli`)
@@ -40,9 +40,9 @@ NO toques `docs/superpowers/PROGRESS.md`.
 **Files:** `packages/cli/src/config.ts`, `packages/cli/src/cli.ts` (+ tests).
 
 - [ ] `MurmurConfig.wakeWord` (defaults del spec) normalizada/validada; `config set-wakeword <campo> <valor>`
-  (`enabled` bool, `phrase` string no vacía, `sensitivity` 0..1); `config`/`status` lo muestran.
+      (`enabled` bool, `phrase` string no vacía, `sensitivity` 0..1); `config`/`status` lo muestran.
 - [ ] Tests (fallan→pasan): defaults; `set-wakeword enabled true` y phrase/sensitivity persisten y validan;
-  valor inválido → error; `config` lo refleja.
+      valor inválido → error; `config` lo refleja.
 - [ ] Commit: `feat(cli): config de wake word`.
 
 ## Task 4: Cableado en `useMurmur` (`apps/desktop`)
@@ -50,9 +50,9 @@ NO toques `docs/superpowers/PROGRESS.md`.
 **Files:** `apps/desktop/src/use-murmur.ts` (+ test).
 
 - [ ] `useMurmur` acepta `wakeWord?: WakeWordDetector`; si `config.wakeWord.enabled`, `start(onDetected)`
-  con `onDetected` = disparar la captura (igual que el hotkey); limpieza con `stop`.
+      con `onDetected` = disparar la captura (igual que el hotkey); limpieza con `stop`.
 - [ ] Test (renderHook/RTL): con detector mock y `enabled`, `triggerDetection()` → captura (`listening`);
-  deshabilitado → no arranca. Tests previos verdes.
+      deshabilitado → no arranca. Tests previos verdes.
 - [ ] Commit: `feat(desktop): activación por wake word en useMurmur`.
 
 ## Task 5: Verificación de fase

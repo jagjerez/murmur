@@ -19,15 +19,29 @@ que guardan memoria de largo plazo. Repo en verde, tests sin red.
 **Files:** `packages/rag/src/chat.ts` (+ `chat.test.ts`), export en `index.ts`.
 
 ```ts
-export interface ChatMessage { role: 'system' | 'user' | 'assistant'; content: string; }
-export interface ChatProvider { complete(messages: ChatMessage[], opts?: { temperature?: number; maxTokens?: number }): Promise<string>; }
-export function createOpenAIChatProvider(cfg: { apiKey: string; model?: string; fetchFn?: typeof fetch }): ChatProvider;
-export function createMockChatProvider(responder: (messages: ChatMessage[]) => string): ChatProvider;
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+export interface ChatProvider {
+  complete(
+    messages: ChatMessage[],
+    opts?: { temperature?: number; maxTokens?: number },
+  ): Promise<string>;
+}
+export function createOpenAIChatProvider(cfg: {
+  apiKey: string;
+  model?: string;
+  fetchFn?: typeof fetch;
+}): ChatProvider;
+export function createMockChatProvider(
+  responder: (messages: ChatMessage[]) => string,
+): ChatProvider;
 ```
 
 - [ ] Tests (fallan→pasan): OpenAI con `fetchFn` mock → URL `/v1/chat/completions`, `Authorization: Bearer`,
-  body `{model, messages}`; parsea `choices[0].message.content`; error HTTP/parse → `ModelError`; key no
-  logueada. Mock determinista llama al `responder`.
+      body `{model, messages}`; parsea `choices[0].message.content`; error HTTP/parse → `ModelError`; key no
+      logueada. Mock determinista llama al `responder`.
 - [ ] Commit: `feat(rag): ChatProvider OpenAI + mock`.
 
 ## Task 2: `SessionSummarizer` (`summarizer.ts`)
@@ -35,12 +49,12 @@ export function createMockChatProvider(responder: (messages: ChatMessage[]) => s
 **Files:** `packages/rag/src/summarizer.ts` (+ `summarizer.test.ts`), export en `index.ts`.
 
 - [ ] `createSessionSummarizer({ chat, conversation, sink?, now? })` → `SessionSummarizer`.
-  `summarize(sessionId)`: `conversation.getMessages(sessionId)`; si vacío, no llama al LLM (devuelve
-  '' o nota); si no, construye `ChatMessage[]` (system de resumen + transcript) → `chat.complete` →
-  guarda `MemoryItem { type:'session_summary', content, sessionId }` vía `sink` (default `store.memory.add`)
-  → devuelve el texto.
+      `summarize(sessionId)`: `conversation.getMessages(sessionId)`; si vacío, no llama al LLM (devuelve
+      '' o nota); si no, construye `ChatMessage[]` (system de resumen + transcript) → `chat.complete` →
+      guarda `MemoryItem { type:'session_summary', content, sessionId }` vía `sink` (default `store.memory.add`)
+      → devuelve el texto.
 - [ ] Tests (fallan→pasan): con mensajes, llama al chat y guarda un `session_summary` con `sessionId`
-  correcto + devuelve el resumen; sesión vacía no llama al chat; `sink` inyectado recibe el item.
+      correcto + devuelve el resumen; sesión vacía no llama al chat; `sink` inyectado recibe el item.
 - [ ] Commit: `feat(rag): SessionSummarizer`.
 
 ## Task 3: `FactExtractor` (`facts.ts`)
@@ -48,10 +62,10 @@ export function createMockChatProvider(responder: (messages: ChatMessage[]) => s
 **Files:** `packages/rag/src/facts.ts` (+ `facts.test.ts`), export en `index.ts`.
 
 - [ ] `createFactExtractor({ chat, sink?, now? })` → `FactExtractor`. `extract(text)`: prompt que pide
-  un array JSON de hechos atómicos; parseo ROBUSTO (extrae el primer array JSON válido aunque venga
-  con fences ```json o prosa; si no hay array, `[]`); guarda cada hecho como `long_term_fact`; devuelve `string[]`.
+      un array JSON de hechos atómicos; parseo ROBUSTO (extrae el primer array JSON válido aunque venga
+      con fences ```json o prosa; si no hay array, `[]`); guarda cada hecho como `long_term_fact`; devuelve `string[]`.
 - [ ] Tests (fallan→pasan): respuesta `["a","b"]` → 2 facts guardados + devueltos; respuesta con fences
-  y prosa alrededor → parsea igual; respuesta sin JSON → `[]` (no lanza); `sink` inyectado recibe los items.
+      y prosa alrededor → parsea igual; respuesta sin JSON → `[]` (no lanza); `sink` inyectado recibe los items.
 - [ ] Commit: `feat(rag): FactExtractor con parseo robusto de JSON`.
 
 ## Task 4: Verificación de fase

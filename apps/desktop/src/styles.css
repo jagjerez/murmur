@@ -239,3 +239,187 @@ body {
   outline: 2px solid var(--mur-accent-400);
   outline-offset: 2px;
 }
+
+/* ── Superficies de UI avanzada (F11) ──────────────────────────────────── */
+.onboarding,
+.settings,
+.error-state {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(380px, 92vw);
+  max-height: 92vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mur-space-4, 16px);
+  padding: var(--mur-space-6, 24px);
+  border-radius: var(--mur-radius-lg);
+  background: var(--mur-surface-raised);
+  border: 1px solid var(--mur-border);
+  box-shadow: var(--mur-shadow-glass);
+}
+
+.onboarding h1,
+.settings h2 {
+  font-size: var(--mur-font-size-lg, 18px);
+  font-weight: 600;
+  color: var(--mur-text);
+}
+
+.onboarding p,
+.error-state__message {
+  color: var(--mur-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.onboarding form,
+.settings__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.onboarding label,
+.settings__row > label,
+.settings__row > span {
+  color: var(--mur-text-muted);
+  font-family: var(--mur-font-mono);
+  font-size: 12px;
+}
+
+.onboarding input,
+.settings input,
+.settings select {
+  padding: 8px 10px;
+  border-radius: var(--mur-radius-sm, 8px);
+  border: 1px solid var(--mur-border);
+  background: var(--mur-glass);
+  color: var(--mur-text);
+  font: inherit;
+}
+
+.onboarding button,
+.settings button,
+.error-state__action {
+  align-self: flex-start;
+  padding: 8px 16px;
+  border-radius: var(--mur-radius-full);
+  border: 1px solid var(--mur-accent-400);
+  background: var(--mur-accent-600, #cf7350);
+  color: #fff;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.onboarding button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.onboarding input:focus-visible,
+.settings input:focus-visible,
+.settings select:focus-visible,
+.onboarding button:focus-visible,
+.settings button:focus-visible,
+.error-state__action:focus-visible {
+  outline: 2px solid var(--mur-accent-200, #eab497);
+  outline-offset: 2px;
+}
+
+.onboarding__progress {
+  display: flex;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+}
+
+.onboarding__progress li {
+  width: 28px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--mur-border);
+}
+
+.onboarding__progress li[data-active='true'] {
+  background: var(--mur-accent-400);
+}
+
+.onboarding__progress li[data-done='true'] {
+  background: var(--mur-accent-600, #cf7350);
+}
+
+.onboarding__error,
+.settings__error {
+  color: var(--mur-state-error, #d8584e);
+  font-size: 12px;
+}
+
+.error-state__title {
+  font-size: var(--mur-font-size-lg, 18px);
+  font-weight: 600;
+  color: var(--mur-text);
+}
+
+.settings__status [data-status='connected'] {
+  color: var(--mur-state-listening, #e0916b);
+}
+.settings__status [data-status='error'] {
+  color: var(--mur-state-error, #d8584e);
+}
+
+/* ── Transcripción (F11) ───────────────────────────────────────────────── */
+.transcript {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.transcript__line {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: var(--mur-radius-md);
+  background: var(--mur-glass);
+  border: 1px solid var(--mur-border);
+}
+
+.transcript__line[data-role='user'] {
+  align-self: flex-end;
+  max-width: 85%;
+}
+
+.transcript__line[data-role='assistant'] {
+  align-self: flex-start;
+  max-width: 85%;
+}
+
+.transcript__who {
+  font-family: var(--mur-font-mono);
+  font-size: 11px;
+  color: var(--mur-text-muted);
+}
+
+.transcript__text {
+  color: var(--mur-text);
+  font-size: 14px;
+}
+
+.transcript__empty {
+  color: var(--mur-text-muted);
+  font-style: italic;
+  font-size: 13px;
+}
+
+.muted {
+  color: var(--mur-text-muted);
+  font-style: italic;
+}

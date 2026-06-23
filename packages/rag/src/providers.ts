@@ -5,10 +5,18 @@ export interface EmbeddingProvider {
   embed(texts: string[]): Promise<number[][]>;
 }
 
+/** Item a persistir: `createdAt` es opcional (lo fija el store con su reloj si falta). */
+export type NewMemoryItem = Omit<MemoryItem, 'createdAt'> & { createdAt?: number };
+
 export interface MemoryStore {
-  add(item: MemoryItem): Promise<void>;
+  add(item: NewMemoryItem): Promise<void>;
   all(): Promise<MemoryItem[]>;
   clear(): Promise<void>;
+  getByType(type: MemoryItem['type']): Promise<MemoryItem[]>;
+  recent(limit: number): Promise<MemoryItem[]>;
+  get(id: string): Promise<MemoryItem | undefined>;
+  delete(id: string): Promise<void>;
+  count(): Promise<number>;
 }
 
 export interface RagRetriever {

@@ -98,6 +98,50 @@ describe('ConversationOrchestrator (pipeline)', () => {
     expect(h.realtime.lastOptions?.instructions).toContain('al usuario le gusta el té');
   });
 
+  it('las instructions contienen la persona cálida de murmur (buildSystemPrompt)', async () => {
+    const items: MemoryItem[] = [
+      { id: '1', type: 'long_term_fact', content: 'al usuario le gusta el té', createdAt: 1 },
+    ];
+    const retriever: RagRetriever = {
+      retrieve: () => Promise.resolve(items),
+    };
+    const h = build([], { retriever });
+    await h.orch.startSession();
+
+    const instructions = h.realtime.lastOptions?.instructions ?? '';
+    // Persona: marca + calidez + bloque de contexto "Lo que recuerdo".
+    expect(instructions).toContain('murmur');
+    expect(instructions).toMatch(/cálid|cercan|íntim/i);
+    expect(instructions).toMatch(/Lo que recuerdo/i);
+    expect(instructions).toContain('al usuario le gusta el té');
+  });
+
+  it('sin retriever las instructions son sólo la persona (sin bloque de contexto)', async () => {
+    const h = build([]);
+    await h.orch.startSession();
+
+    const instructions = h.realtime.lastOptions?.instructions ?? '';
+    expect(instructions).toMatch(/murmur/i);
+    expect(instructions).not.toMatch(/Lo que recuerdo/i);
+  });
+
+  it('respeta el locale al construir las instructions', async () => {
+    const realtime = createMockRealtimeProvider();
+    const store = createSqliteStore(':memory:');
+    const orch = new ConversationOrchestrator({
+      realtime,
+      input: createMockVoiceInput([]),
+      output: createMemoryVoiceOutput(),
+      conversation: store.conversation,
+      connection: { apiKey: 'k', model: 'm' },
+      locale: 'en',
+    });
+    await orch.startSession();
+
+    const instructions = realtime.lastOptions?.instructions ?? '';
+    expect(instructions).toMatch(/warm|close|intimate/i);
+  });
+
   it('startListening envía los chunks del input al sendAudio de la sesión', async () => {
     const a = new Uint8Array([1, 2]);
     const b = new Uint8Array([3, 4]);

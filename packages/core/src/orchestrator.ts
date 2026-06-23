@@ -9,7 +9,6 @@ import {
 import type {
   ConversationStore,
   FactExtractor,
-  MemoryItem,
   NewMemoryItem,
   RagRetriever,
   SessionSummarizer,
@@ -19,6 +18,7 @@ import type {
   RealtimeModelProvider,
   RealtimeModelSession,
 } from './providers/realtime-model-provider';
+import { buildSystemPrompt, type PromptLocale } from './prompt';
 
 /** Retriever opcional que, además de recuperar, puede indexar memoria nueva. */
 export type IndexingRetriever = RagRetriever & {
@@ -45,6 +45,8 @@ export interface OrchestratorDeps {
   retriever?: IndexingRetriever;
   summarizer?: SessionSummarizer;
   factExtractor?: FactExtractor;
+  /** Idioma base de la persona del system prompt (es por defecto). */
+  locale?: PromptLocale;
   onStateChange?: (state: AssistantState) => void;
   onTranscript?: (event: { role: 'user' | 'assistant'; text: string }) => void;
   onError?: (error: Error) => void;
@@ -55,8 +57,6 @@ export interface OrchestratorDeps {
 export type OrchestratorEvents = Pick<OrchestratorDeps, 'onStateChange'>;
 
 const CONTEXT_LIMIT = 5;
-const BASE_INSTRUCTIONS =
-  'Eres murmur, un asistente de voz cálido y conciso. Responde de forma natural y breve.';
 
 /**
  * Genera un UUID con la Web Crypto API (`globalThis.crypto`), disponible tanto en
@@ -121,8 +121,8 @@ export class ConversationOrchestrator {
 
   /**
    * Crea una sesión de conversación, recupera contexto (RAG) si hay `retriever`,
-   * construye unas `instructions` básicas y conecta el provider realtime
-   * registrando los callbacks del pipeline.
+   * construye el system prompt (persona cálida + contexto, vía `buildSystemPrompt`)
+   * y conecta el provider realtime registrando los callbacks del pipeline.
    */
   async startSession(query = ''): Promise<Session> {
     const realtime = this.require('realtime');
@@ -311,16 +311,11 @@ export class ConversationOrchestrator {
   // --- Instrucciones / contexto ----------------------------------------------
 
   private async buildInstructions(query: string): Promise<string> {
+    const locale = this.deps.locale;
     const retriever = this.deps.retriever;
-    if (retriever === undefined) {
-      return BASE_INSTRUCTIONS;
-    }
-    const items = await retriever.retrieve(query, { limit: CONTEXT_LIMIT });
-    if (items.length === 0) {
-      return BASE_INSTRUCTIONS;
-    }
-    const context = items.map((i: MemoryItem) => `- ${i.content}`).join('\n');
-    return `${BASE_INSTRUCTIONS}\n\nContexto relevante sobre el usuario:\n${context}`;
+    const context =
+      retriever === undefined ? [] : await retriever.retrieve(query, { limit: CONTEXT_LIMIT });
+    return buildSystemPrompt({ context, ...(locale !== undefined ? { locale } : {}) });
   }
 
   // --- Utilidades de deps -----------------------------------------------------

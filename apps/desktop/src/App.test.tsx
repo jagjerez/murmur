@@ -101,4 +101,36 @@ describe('App shell — onboarding vs cápsula', () => {
   it('no rompe sin deps (usa defaults: Tauri/Web, no-op fuera de Tauri)', () => {
     expect(() => render(<App />)).not.toThrow();
   });
+
+  it('el modelo puede invocar una tool y recibe el resultado (function-calling end-to-end)', async () => {
+    const hotkey = createMemoryHotkeyManager();
+    const realtime = createMockRealtimeProvider();
+    const config = createMockConfigClient({ apiKey: 'sk-test-key-abcdef' });
+    const dispatchTool = vi.fn(async () => 'son las 12');
+    const toolHost = {
+      tools: [
+        { type: 'function' as const, name: 'current_time', description: 'h', parameters: {} },
+      ],
+      dispatchTool,
+    };
+    render(<App {...baseProps({ hotkey, realtime, config, toolHost })} />);
+
+    await screen.findByRole('status');
+    await waitFor(() => expect(hotkey.registered().length).toBeGreaterThan(0));
+    await act(async () => {
+      hotkey.trigger(hotkey.registered()[0]!);
+    });
+    await waitFor(() => expect(realtime.lastSession).toBeDefined());
+    // Las tools del host llegaron al realtime (App → useMurmur → orchestrator → connect).
+    expect(realtime.lastSession?.tools?.map((t) => t.name)).toEqual(['current_time']);
+
+    await act(async () => {
+      realtime.emitToolCall({ callId: 'c1', name: 'current_time', arguments: {} });
+    });
+
+    await waitFor(() => expect(dispatchTool).toHaveBeenCalledWith('current_time', {}));
+    await waitFor(() =>
+      expect(realtime.lastSession?.toolResults).toEqual([{ callId: 'c1', output: 'son las 12' }]),
+    );
+  });
 });

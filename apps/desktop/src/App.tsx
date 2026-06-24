@@ -15,6 +15,7 @@ import {
   WebVoiceOutputProvider,
 } from './audio/web-audio';
 import { createTauriConfigClient, type ConfigClient, type ThemePref } from './config/config-client';
+import { createDesktopToolHost, type ToolHost } from './plugins/desktop-plugins';
 
 export interface AppProps {
   /** Configuración persistida. Por defecto Tauri (degrada a memoria fuera de Tauri). */
@@ -31,6 +32,8 @@ export interface AppProps {
   devices?: AudioDeviceManager;
   /** Solicitud de permiso de micrófono para el onboarding. */
   requestMic?: RequestMic;
+  /** Host de tools (plugins) para function-calling. Por defecto los plugins del webview. */
+  toolHost?: ToolHost;
 }
 
 function applyTheme(theme: ThemePref): void {
@@ -57,6 +60,7 @@ export function App({
   hotkey,
   devices,
   requestMic,
+  toolHost,
 }: AppProps = {}) {
   // Defaults reales, construidos una vez. En tests se inyectan mocks.
   const configRef = useRef<ConfigClient | null>(null);
@@ -72,6 +76,10 @@ export function App({
   if (hotkeyRef.current === null) hotkeyRef.current = hotkey ?? createTauriHotkeyManager();
   const devicesRef = useRef<AudioDeviceManager | null>(null);
   if (devicesRef.current === null) devicesRef.current = devices ?? new WebAudioDeviceManager();
+  // El tool host por defecto es JS puro (registry + tool-defs, sin I/O); se construye una vez aunque
+  // todavía no haya API key (onboarding). Sólo se usa cuando arranca la sesión (con key + hotkey).
+  const toolHostRef = useRef<ToolHost | null>(null);
+  if (toolHostRef.current === null) toolHostRef.current = toolHost ?? createDesktopToolHost();
 
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -94,6 +102,8 @@ export function App({
     input: inputRef.current,
     output: outputRef.current,
     hotkey: hotkeyRef.current,
+    tools: toolHostRef.current.tools,
+    dispatchTool: toolHostRef.current.dispatchTool,
   });
 
   // Nivel real del ecualizador: sólo mientras se está capturando (escuchando).

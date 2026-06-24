@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { renderHook, act, cleanup, waitFor } from '@testing-library/react';
 import {
   createMockRealtimeProvider,
@@ -203,5 +203,35 @@ describe('useMurmur', () => {
       unmount();
       await waitFor(() => expect(wakeWord.enabled).toBe(false));
     });
+  });
+
+  it('pasa las tools al realtime y despacha una tool-call del modelo', async () => {
+    const hotkey = createMemoryHotkeyManager();
+    const realtime = createMockRealtimeProvider();
+    const config = createMockConfigClient({ apiKey: 'sk-test-key-abcdef' });
+    const dispatchTool = vi.fn(async () => 'resultado-tool');
+    const tools = [{ type: 'function' as const, name: 'demo', description: 'd', parameters: {} }];
+    const { result } = renderHook(() =>
+      useMurmur(makeDeps({ hotkey, realtime, config, tools, dispatchTool })),
+    );
+
+    await waitFor(() => expect(hotkey.registered().length).toBeGreaterThan(0));
+    await act(async () => {
+      hotkey.trigger(hotkey.registered()[0]!);
+    });
+    await waitFor(() => expect(result.current.connection).toBe('connected'));
+
+    expect(realtime.lastSession?.tools?.map((t) => t.name)).toEqual(['demo']);
+
+    await act(async () => {
+      realtime.emitToolCall({ callId: 'c1', name: 'demo', arguments: { a: 1 } });
+    });
+
+    await waitFor(() => expect(dispatchTool).toHaveBeenCalledWith('demo', { a: 1 }));
+    await waitFor(() =>
+      expect(realtime.lastSession?.toolResults).toEqual([
+        { callId: 'c1', output: 'resultado-tool' },
+      ]),
+    );
   });
 });

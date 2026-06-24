@@ -4,6 +4,7 @@ import {
   ConversationOrchestrator,
   type HotkeyManager,
   type RealtimeModelProvider,
+  type RealtimeTool,
   type WakeWordDetector,
 } from '@murmur/core';
 import type { ConversationStore } from '@murmur/rag';
@@ -25,6 +26,15 @@ export interface MurmurDeps {
    * y su detección dispara la captura (igual que el hotkey). Opcional: si falta, no hay wake word.
    */
   wakeWord?: WakeWordDetector;
+  /**
+   * Tools que el modelo puede invocar (function-calling) y su despachador. Van **acoplados**:
+   * provéelos juntos (normalmente vía `createDesktopToolHost`). Pasar `dispatchTool` sin `tools`
+   * no tiene efecto (sin tools el modelo no emite tool-calls); pasar `tools` sin `dispatchTool`
+   * hace que las tool-calls se descarten de forma segura. Ambos opcionales.
+   */
+  tools?: RealtimeTool[];
+  /** Despachador de tools; ejecuta una tool y devuelve su salida como texto. Ver `tools`. */
+  dispatchTool?: (name: string, args: Record<string, unknown>) => Promise<string>;
   /** Almacén de conversación. Por defecto en memoria (webview). */
   conversation?: ConversationStore;
   /** ID del dispositivo de entrada a usar (micrófono seleccionado). */
@@ -72,7 +82,7 @@ export function useMurmur(deps: MurmurDeps): MurmurController {
 
   const ensureSession = useCallback(async (): Promise<void> => {
     if (connectedRef.current) return;
-    const { config, realtime, input, output } = depsRef.current;
+    const { config, realtime, input, output, tools, dispatchTool } = depsRef.current;
     const apiKey = await config.readApiKey();
     if (!apiKey) {
       setConnection('error');
@@ -87,6 +97,8 @@ export function useMurmur(deps: MurmurDeps): MurmurController {
       output,
       conversation: conversationRef.current!,
       connection: { apiKey, model: view.model, voice: view.voice },
+      ...(tools !== undefined ? { tools } : {}),
+      ...(dispatchTool !== undefined ? { dispatchTool } : {}),
       onStateChange: (s) => setCapsuleState(s),
       onTranscript: (e) => setTranscript((prev) => [...prev, e]),
       onError: () => setConnection('error'),

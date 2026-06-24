@@ -50,7 +50,7 @@ Usa `murmur help` para la lista completa de comandos.
 
 ## Requisitos
 
-- Node ≥ 20 (recomendado: la versión de `.nvmrc`)
+- Node ≥ 24 (recomendado: la versión de `.nvmrc`). Imprescindible: `node:sqlite` (módulo built-in sin flag desde Node 24) y pnpm 11 exige Node ≥ 22.13.
 - pnpm 11+
 - Rust (solo para la app de escritorio Tauri y el crate nativo)
 

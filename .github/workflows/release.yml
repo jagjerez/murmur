@@ -1,12 +1,22 @@
-# Plantilla de release (NO se ejecuta sin secretos).
+# Release de murmur. Se dispara al empujar un tag `vX.Y.Z`.
 #
-# Se dispara al empujar un tag `vX.Y.Z`. Construye los bundles nativos de Tauri por
-# plataforma y publica el CLI `murmur` en npm. Requiere secretos configurados en el repo:
-#   - NPM_TOKEN          token de publicación de npm (CLI publish)
-#   - TAURI_SIGNING_*    claves de firma/updater de Tauri (opcional, para firmar binarios)
+#   - job `desktop`:    construye (y firma, si hay secretos) los bundles de Tauri por plataforma
+#                       con `tauri-action` y los sube a un GitHub Release en borrador.
+#   - job `publish-cli`: publica el CLI `murmur` en npm vía **trusted publishing (OIDC)** — SIN token.
 #
-# La build nativa de Tauri queda fuera del CI por defecto (necesita deps de sistema del
-# webview). Esta plantilla documenta cómo producir una release real.
+# Lo que debes configurar (TODO opcional: sin secretos, el workflow corre y construye sin firmar):
+#
+#   Updater (Tauri):  TAURI_SIGNING_PRIVATE_KEY (+ _PASSWORD)
+#                     genera el par con `pnpm --filter @murmur/desktop tauri signer generate`.
+#   macOS (firma+notarización):  APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
+#                     APPLE_ID, APPLE_PASSWORD (contraseña específica de app), APPLE_TEAM_ID.
+#                     Requiere cuenta Apple Developer. Ver https://v2.tauri.app/distribute/sign/macos/
+#   Windows (firma):  lo más accesible hoy es Azure Key Vault como HSM en la nube.
+#                     Ver https://v2.tauri.app/distribute/sign/windows/
+#   npm:              NINGÚN secreto. Registra el "trusted publisher" del paquete en npmjs.com
+#                     (Settings del paquete → Trusted Publisher → repo + workflow `release.yml`).
+#                     Requiere npm CLI >= 11.5.1 (se asegura abajo). Provenance es automática.
+#                     Ver https://docs.npmjs.com/trusted-publishers/
 
 name: Release
 
@@ -15,19 +25,29 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   # ---------------------------------------------------------------------------
   # Bundles de la app de escritorio (Tauri) por plataforma.
   # ---------------------------------------------------------------------------
   desktop:
-    name: Desktop bundle (${{ matrix.platform }})
+    name: Desktop bundle (${{ matrix.platform }} ${{ matrix.args }})
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: macos-latest
-          - platform: ubuntu-latest
+            args: --target aarch64-apple-darwin
+          - platform: macos-latest
+            args: --target x86_64-apple-darwin
+          - platform: ubuntu-22.04
+            args: ''
           - platform: windows-latest
+            args: ''
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout
@@ -44,51 +64,65 @@ jobs:
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      # Dependencias de sistema del webview (solo Linux).
+      - name: Cache Rust (src-tauri)
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./apps/desktop/src-tauri -> target
+
+      # Dependencias de sistema del webview (solo Linux). Tauri v2 usa webkit2gtk-4.1.
       - name: Install Linux webview deps
-        if: matrix.platform == 'ubuntu-latest'
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev \
             libappindicator3-dev \
             librsvg2-dev \
-            patchelf \
-            build-essential \
-            libssl-dev
+            patchelf
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Genera los iconos por plataforma a partir del SVG fuente.
+      # Genera los iconos por plataforma a partir del SVG fuente (solo el SVG vive en el repo).
       - name: Generate icons
         working-directory: apps/desktop
         run: pnpm tauri icon src-tauri/icons/icon.svg
 
-      - name: Build Tauri bundles
-        working-directory: apps/desktop
+      - name: Build & release Tauri bundles
+        uses: tauri-apps/tauri-action@v0
         env:
-          # Firma opcional; sin estos secretos se construye sin firmar.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Firma del updater (opcional; sin estos secretos se construye sin firmar).
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: pnpm tauri build
-
-      - name: Upload bundles
-        uses: actions/upload-artifact@v4
+          # Firma + notarización de macOS (opcional).
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
-          name: murmur-${{ matrix.platform }}
-          path: |
-            apps/desktop/src-tauri/target/release/bundle/**
+          projectPath: apps/desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: murmur ${{ github.ref_name }}
+          releaseBody: Bundles de escritorio de murmur. Descarga el instalador de tu plataforma en los assets.
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
 
   # ---------------------------------------------------------------------------
-  # Publicación del CLI `murmur` en npm.
+  # Publicación del CLI `murmur` en npm vía trusted publishing (OIDC, sin token).
   # ---------------------------------------------------------------------------
   publish-cli:
-    name: Publish CLI to npm
+    name: Publish CLI to npm (OIDC)
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write # necesario para trusted publishing (OIDC)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -109,9 +143,12 @@ jobs:
       - name: Build CLI
         run: pnpm --filter murmur build
 
-      # `prepublishOnly` reconstruye el bundle; `--access public` publica el paquete.
+      # Trusted publishing exige npm CLI >= 11.5.1; Node 26 ya lo trae, pero lo aseguramos.
+      - name: Ensure npm >= 11.5.1
+        run: npm install -g npm@latest
+
+      # Con OIDC + el trusted publisher configurado en npm, NO hace falta NODE_AUTH_TOKEN;
+      # `npm publish` adjunta provenance automáticamente.
       - name: Publish
         working-directory: packages/cli
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public

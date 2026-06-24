@@ -1,16 +1,24 @@
 # Proceso de release de murmur
 
-Este documento describe el flujo manual de release. No usamos changesets (YAGNI); la versión
-del producto se gestiona a mano y se documenta aquí. La build nativa de Tauri y la publicación
-real en npm quedan fuera del CI por defecto y requieren credenciales.
+Este documento describe el flujo de release. No usamos changesets (YAGNI); la versión del
+producto se gestiona a mano y se documenta aquí. El release está **automatizado** en
+`.github/workflows/release.yml`: al empujar un tag `vX.Y.Z` construye los bundles de Tauri por
+plataforma (con `tauri-action`) y publica el CLI en npm vía **trusted publishing (OIDC, sin token)**.
+La firma/notarización y el "trusted publisher" requieren configuración previa (ver más abajo); sin
+ella el workflow igual corre y construye sin firmar. Las secciones 4–7 documentan el flujo **manual**
+equivalente por si lo prefieres en local.
 
 ## Prerrequisitos
 
 - Working tree limpio en la rama de integración (p. ej. `main`), con la puerta de calidad en
   verde (ver [Verificación](#verificación)).
-- Acceso de publicación al paquete `murmur` en npm (`NPM_TOKEN`).
-- Para los bundles de escritorio: Rust + dependencias de sistema del webview por plataforma.
-- (Opcional) Claves de firma de Tauri si se firman/notarizan los binarios.
+- **Publicación en npm (recomendado: OIDC):** registra el _trusted publisher_ del paquete `murmur`
+  en npmjs.com (Settings del paquete → Trusted Publisher → este repo + workflow `release.yml`). No
+  necesitas `NPM_TOKEN`. Alternativa local: `npm login` con acceso de publicación al paquete.
+- Para los bundles de escritorio: Rust + dependencias de sistema del webview por plataforma
+  (en CI las instala el workflow; webkit2gtk-4.1 en Linux).
+- (Opcional) Firma: clave del updater (`TAURI_SIGNING_PRIVATE_KEY`), firma+notarización macOS
+  (`APPLE_*`) y firma Windows (Azure Key Vault). Configúralas como secretos del repo.
 
 ## 1. Bump de versión
 
@@ -62,8 +70,10 @@ git tag vX.Y.Z
 git push origin <rama> --tags
 ```
 
-El push del tag `vX.Y.Z` dispara `.github/workflows/release.yml` (si los secretos están
-configurados): construye los bundles de Tauri por plataforma y publica el CLI en npm.
+El push del tag `vX.Y.Z` dispara `.github/workflows/release.yml`: el job `desktop` construye (y
+firma, si hay secretos) los bundles de Tauri por plataforma con `tauri-action` y los sube a una
+release en **borrador**; el job `publish-cli` publica el CLI en npm por **OIDC** (sin token, con
+provenance). Si prefieres hacerlo a mano, sigue las secciones 4–7.
 
 ## 4. Generar iconos (app de escritorio)
 
@@ -89,13 +99,14 @@ pnpm tauri build
 Los artefactos quedan en `apps/desktop/src-tauri/target/release/bundle/`. Súbelos a la
 release de GitHub correspondiente al tag.
 
-## 6. Publicar el CLI en npm
+## 6. Publicar el CLI en npm (manual)
 
-El CLI se publica con `prepack`/`prepublishOnly` reconstruyendo el bundle (tsup):
+En CI esto lo hace el job `publish-cli` por OIDC. Para publicarlo a mano, autentícate con
+`npm login` y publica (el `prepack`/`prepublishOnly` reconstruye el bundle con tsup):
 
 ```bash
 cd packages/cli
-npm publish --access public   # requiere estar autenticado (npm login / NPM_TOKEN)
+npm publish --access public   # requiere npm login con acceso de publicación al paquete
 ```
 
 Comprueba que la versión publicada es instalable:

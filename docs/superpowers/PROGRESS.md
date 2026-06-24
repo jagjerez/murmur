@@ -192,3 +192,31 @@
   `src-tauri/icons/icon.svg` (terracota; binarios vía `tauri icon`). `.github/workflows/ci.yml`
   (puerta completa + cargo) y `release.yml` (plantilla). README + `docs/RELEASING.md`. **Verificación
   E2E final verde**: 525 tests, sin secretos. Versión 0.1.0 coherente en cli/tauri/VERSION.
+
+## Post-F16 — pendientes documentados
+
+- **Fix CI (2026-06-24, en `main`, commits `688163f`+`4abe4cb`):** la CI de F16 fijaba `node-version: 20`,
+  incompatible con `pnpm@11.5.3` (≥22.13) y con `node:sqlite` (built-in sin flag desde Node 24). Fix:
+  `.nvmrc`=26 (+ workflows con `node-version-file`), `engines.node` `>=24`, y `allowBuilds: { esbuild: true }`
+  en `pnpm-workspace.yaml` (pnpm 11 sale con código 1 ante build scripts no aprobados; `onlyBuiltDependencies`
+  no basta). CI verde verificada en GitHub Actions.
+- **Function-calling realtime → plugins (2026-06-24, rama `feature/realtime-function-calling`):** spec en
+  `docs/superpowers/specs/2026-06-24-realtime-function-calling.md`, plan en `…/plans/…`. Implementado
+  end-to-end por subagentes (TDD, 6 tasks + review de spec y calidad por task + review holístico final →
+  READY TO MERGE). El asistente puede invocar tools (plugins) en plena conversación de voz. **Arquitectura
+  desacoplada:** `@murmur/core` NO depende de `@murmur/plugins`; el orchestrator recibe `tools: RealtimeTool[]`
+  - `dispatchTool: (name, args) => Promise<string>` genéricos. Capas: (1) tipos `RealtimeTool`/`RealtimeToolCall`
+  - `tools`/`onToolCall`/`sendToolResult` en la interfaz realtime; (2) provider real OpenAI Realtime —
+    `session.update` con `tools`/`tool_choice:'auto'`, parseo de `output_item.added`+`function_call_arguments.{delta,done}`
+    → `onToolCall`, y `sendToolResult` → `function_call_output`+`response.create`; (3) orchestrator orquesta
+    tool-call → `dispatchTool` → `sendToolResult` (errores del dispatch → output de texto, nunca estado `error`);
+    (4) `mock-realtime` con `emitToolCall`/captura de `tools`/`toolResults`; (5) `createDesktopToolHost`
+    (`apps/desktop/src/plugins/desktop-plugins.ts`) adapta el `PluginRegistry` (clipboard/open-app/time) a
+    `tools`/`dispatchTool`; (6) `useMurmur` + `App.tsx` lo inyectan (prop `toolHost` por defecto). GOTCHA:
+    `RealtimeTool.parameters` es `unknown` para desacoplar de `JsonSchema` de plugins (asignación estructural
+    sin cast). Doble ciclo de respuesta (respuesta de sólo-función → tool result → respuesta final hablada)
+    manejado: sólo persiste la respuesta final (test dedicado). **Puerta verde:** 515 tests TS (core 127,
+    desktop 119, plugins 18, …) + 30 cargo, typecheck/lint/build/prettier OK. Pendientes que SIGUEN fuera de
+    alcance: builds nativas Tauri + publish npm (credenciales/deps de sistema), modelos reales de wake word y
+    whisper local (los aporta el usuario), y el detector de wake word concreto en `App.tsx` (necesita audio
+    nativo + modelo).

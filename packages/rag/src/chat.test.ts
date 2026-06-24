@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ModelError } from '@murmur/shared';
-import { createMockChatProvider, createOpenAIChatProvider, type ChatMessage } from './chat';
+import {
+  createMockChatProvider,
+  createOpenAIChatProvider,
+  createOllamaChatProvider,
+  type ChatMessage,
+} from './chat';
 
 describe('createMockChatProvider', () => {
   it('es determinista: delega en el responder inyectado', async () => {
@@ -167,5 +172,29 @@ describe('createOpenAIChatProvider', () => {
       logSpy.mockRestore();
       warnSpy.mockRestore();
     }
+  });
+});
+
+describe('createOllamaChatProvider', () => {
+  it('hace POST a /api/chat y parsea message.content', async () => {
+    const calls: { url: string; body: unknown }[] = [];
+    const fetchFn = (async (url: string, init: RequestInit) => {
+      calls.push({ url, body: JSON.parse(String(init.body)) });
+      return new Response(JSON.stringify({ message: { role: 'assistant', content: 'hola' } }), {
+        status: 200,
+      });
+    }) as unknown as typeof globalThis.fetch;
+    const chat = createOllamaChatProvider({ model: 'llama3', fetchFn });
+    const out = await chat.complete([{ role: 'user', content: 'hey' }]);
+    expect(out).toBe('hola');
+    expect(calls[0]!.url).toBe('http://localhost:11434/api/chat');
+    expect(calls[0]!.body).toMatchObject({ model: 'llama3', stream: false });
+  });
+
+  it('estado HTTP no-ok → ModelError', async () => {
+    const fetchFn = (async () =>
+      new Response('nope', { status: 500 })) as unknown as typeof globalThis.fetch;
+    const chat = createOllamaChatProvider({ model: 'llama3', fetchFn });
+    await expect(chat.complete([{ role: 'user', content: 'x' }])).rejects.toThrow(/Ollama/i);
   });
 });

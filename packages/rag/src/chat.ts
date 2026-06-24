@@ -122,3 +122,67 @@ export function createOpenAIChatProvider(options: OpenAIChatOptions): ChatProvid
     },
   };
 }
+
+export interface OllamaChatOptions {
+  /** Modelo de Ollama (p. ej. `llama3`, `qwen2.5`). */
+  model: string;
+  /** Endpoint base de Ollama. Por defecto `http://localhost:11434`. */
+  endpoint?: string;
+  /** `fetch` inyectable. Por defecto `globalThis.fetch`. */
+  fetchFn?: typeof globalThis.fetch;
+}
+
+interface OllamaChatResponse {
+  message?: { role?: string; content?: string };
+}
+
+const DEFAULT_OLLAMA_ENDPOINT = 'http://localhost:11434';
+
+/**
+ * `ChatProvider` contra Ollama local. `POST {endpoint}/api/chat` con `{ model, messages, stream:false }`
+ * y parsea `message.content`. Errores de red/HTTP/parseo → `ModelError`. No corre red en tests (`fetchFn`).
+ */
+export function createOllamaChatProvider(options: OllamaChatOptions): ChatProvider {
+  const endpoint = (options.endpoint ?? DEFAULT_OLLAMA_ENDPOINT).replace(/\/$/, '');
+  const fetchFn = options.fetchFn ?? globalThis.fetch;
+  if (typeof fetchFn !== 'function') {
+    throw new ModelError('No hay fetch disponible para Ollama (globalThis.fetch).');
+  }
+  return {
+    async complete(messages: ChatMessage[], opts?: ChatCompleteOptions): Promise<string> {
+      let response: Response;
+      try {
+        response = await fetchFn(`${endpoint}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: options.model,
+            messages,
+            stream: false,
+            ...(opts?.temperature !== undefined
+              ? { options: { temperature: opts.temperature } }
+              : {}),
+          }),
+        });
+      } catch {
+        throw new ModelError(
+          'No se pudo contactar con Ollama (¿está corriendo en localhost:11434?).',
+        );
+      }
+      if (!response.ok) {
+        throw new ModelError(`Ollama respondió con estado ${response.status}.`);
+      }
+      let payload: OllamaChatResponse;
+      try {
+        payload = (await response.json()) as OllamaChatResponse;
+      } catch {
+        throw new ModelError('No se pudo parsear la respuesta de Ollama.');
+      }
+      const content = payload.message?.content;
+      if (typeof content !== 'string') {
+        throw new ModelError('Respuesta inesperada de Ollama (falta message.content).');
+      }
+      return content.trim();
+    },
+  };
+}

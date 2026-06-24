@@ -5,7 +5,7 @@ import { createPiperTtsProvider } from './piper-tts';
 describe('createPiperTtsProvider', () => {
   it('delega en run y devuelve su PCM', async () => {
     const pcm = new Uint8Array([1, 2, 3]);
-    const run = vi.fn(async (_t: string) => pcm);
+    const run = vi.fn(async () => pcm) as (t: string) => Promise<Uint8Array>;
     const tts = createPiperTtsProvider({ run });
     expect(await tts.synthesize('hola')).toBe(pcm);
     expect(run).toHaveBeenCalledWith('hola');

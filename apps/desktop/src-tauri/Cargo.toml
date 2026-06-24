@@ -10,8 +10,14 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
+[features]
+# Modo offline: transcripción local (whisper.cpp) + TTS local (Piper por subproceso).
+# Compila whisper.cpp (necesita cmake/clang) — fuera del gate por defecto.
+offline = ["dep:whisper-rs"]
+
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-global-shortcut = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+whisper-rs = { version = "0.16", optional = true }

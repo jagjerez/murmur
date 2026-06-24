@@ -12,6 +12,9 @@
 
 mod config;
 
+#[cfg(feature = "offline")]
+mod offline_cmd;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default();
@@ -22,13 +25,24 @@ pub fn run() {
         builder = builder.plugin(tauri_plugin_global_shortcut::Builder::new().build());
     }
 
+    #[cfg(feature = "offline")]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        config::get_config,
+        config::set_config,
+        config::set_openai_key,
+        config::read_openai_key,
+        offline_cmd::transcribe,
+        offline_cmd::tts,
+    ]);
+    #[cfg(not(feature = "offline"))]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        config::get_config,
+        config::set_config,
+        config::set_openai_key,
+        config::read_openai_key,
+    ]);
+
     builder
-        .invoke_handler(tauri::generate_handler![
-            config::get_config,
-            config::set_config,
-            config::set_openai_key,
-            config::read_openai_key,
-        ])
         .run(tauri::generate_context!())
         .expect("error al arrancar la app de murmur");
 }

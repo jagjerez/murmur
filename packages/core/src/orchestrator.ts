@@ -284,7 +284,8 @@ export class ConversationOrchestrator {
   /**
    * El modelo pidió ejecutar una tool. Se despacha fire-and-forget: un fallo del `dispatchTool`
    * se convierte en un output de error (que el modelo gestiona), nunca cambia el estado a `error`
-   * ni rompe la sesión.
+   * ni rompe la sesión. Se asume una tool-call por ciclo de respuesta (varias secuenciales
+   * funcionan); el fan-out de tool-calls paralelas en una misma respuesta queda fuera de alcance.
    */
   private handleToolCall(call: RealtimeToolCall): void {
     void this.runToolCall(call);

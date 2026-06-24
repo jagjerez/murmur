@@ -536,4 +536,39 @@ describe('ConversationOrchestrator (function-calling)', () => {
     );
     expect(states).not.toContain('error');
   });
+
+  it('en un turno con tool-call sólo persiste la respuesta final hablada', async () => {
+    const realtime = createMockRealtimeProvider();
+    const store = createSqliteStore(':memory:');
+    const dispatchTool = vi.fn(async () => 'son las 12');
+    const orch = new ConversationOrchestrator({
+      realtime,
+      input: createMockVoiceInput([]),
+      output: createMemoryVoiceOutput(),
+      conversation: store.conversation,
+      connection: { apiKey: 'k', model: 'm' },
+      tools: [
+        { type: 'function' as const, name: 'current_time', description: 'd', parameters: {} },
+      ],
+      dispatchTool,
+    });
+
+    const session = await orch.startSession();
+
+    // 1) El modelo pide la tool; la despachamos y devolvemos el resultado.
+    realtime.emitToolCall({ callId: 'c1', name: 'current_time', arguments: {} });
+    await vi.waitFor(() =>
+      expect(realtime.lastSession?.toolResults).toEqual([{ callId: 'c1', output: 'son las 12' }]),
+    );
+    // 2) La respuesta de sólo-función termina: sin transcript del asistente → no persiste nada.
+    realtime.emitResponseDone();
+    // 3) La respuesta final hablada llega con transcript y termina.
+    realtime.emitAssistantTranscript('Son las doce.');
+    realtime.emitResponseDone();
+
+    const assistant = store.conversation
+      .getMessages(session.id)
+      .filter((m) => m.role === 'assistant');
+    expect(assistant.map((m) => m.text)).toEqual(['Son las doce.']);
+  });
 });

@@ -1,4 +1,5 @@
 export * from './orchestrator';
+export * from './offline-orchestrator';
 export * from './providers/realtime-model-provider';
 export * from './providers/transcription-provider';
 export * from './providers/whisper';

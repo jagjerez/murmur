@@ -19,6 +19,7 @@ import {
   type PrivacyConfig,
   type WakeWordConfig,
 } from './config';
+import { MODEL_CATALOG, downloadModel } from './models';
 
 export const VERSION = '0.1.0';
 
@@ -86,6 +87,7 @@ Comandos:
   memory prune                   Aplica la retención (retentionDays)
   memory reset [--yes]           Borra la memoria local
   plugins list                   Lista los plugins (skills) integrados
+  models download <nombre>       Descarga un modelo a ~/.murmur/models/
   status                         Muestra el estado de murmur
   help                           Muestra esta ayuda
 
@@ -128,6 +130,9 @@ export async function run(argv: string[], deps: CliDeps): Promise<CliResult> {
 
       case 'plugins':
         return cmdPlugins(out, sub);
+
+      case 'models':
+        return await cmdModels(out, sub, rest);
 
       default:
         out.line(`murmur: comando desconocido "${command}". Usa "murmur help".`);
@@ -228,6 +233,41 @@ function cmdPlugins(out: Output, sub: string | undefined): CliResult {
     out.line(`    Capacidades: ${caps}`);
   }
   return ok(out);
+}
+
+async function cmdModels(out: Output, sub: string | undefined, rest: string[]): Promise<CliResult> {
+  if (sub !== 'download') {
+    out.line(`murmur: subcomando de models desconocido "${sub ?? ''}". Usa "murmur help".`);
+    return fail(out);
+  }
+
+  const name = rest[0];
+  if (!name) {
+    out.line('murmur: indica el nombre del modelo: murmur models download <nombre>.');
+    out.line(`  Modelos disponibles: ${Object.keys(MODEL_CATALOG).join(', ')}.`);
+    return fail(out);
+  }
+
+  const entry = MODEL_CATALOG[name];
+  if (entry === undefined) {
+    out.line(`murmur: modelo desconocido "${name}".`);
+    out.line(`  Modelos disponibles: ${Object.keys(MODEL_CATALOG).join(', ')}.`);
+    return fail(out);
+  }
+
+  out.line(`Descargando ${name} (${entry.sizeLabel}) — ${entry.description}`);
+  out.line(`  Fuente: ${entry.url}`);
+
+  try {
+    const dest = await downloadModel(name);
+    out.line(`murmur: modelo guardado en ${dest}.`);
+    return ok(out);
+  } catch (err) {
+    out.line(
+      `murmur: error al descargar el modelo — ${err instanceof Error ? err.message : String(err)}`,
+    );
+    return fail(out);
+  }
 }
 
 function cmdConfig(out: Output, deps: CliDeps, sub: string | undefined, rest: string[]): CliResult {

@@ -274,4 +274,54 @@ describe('createOpenAIRealtimeProvider', () => {
       expect(msg).not.toContain(API_KEY);
     }
   });
+
+  it('declara las tools en session.update cuando se pasan', async () => {
+    const { provider, getWs } = setup();
+    const tools = [{ type: 'function' as const, name: 'demo', description: 'd', parameters: {} }];
+    const sessionPromise = provider.connect({ ...baseOptions, tools });
+    const ws = getWs();
+    ws.simulateOpen();
+    await sessionPromise;
+
+    const update = parseSent(ws).find((m) => m.type === 'session.update')!;
+    const session = update.session as Record<string, unknown>;
+    expect(session.tools).toEqual(tools);
+    expect(session.tool_choice).toBe('auto');
+  });
+
+  it('sin tools, session.update no incluye tools (compat F5)', async () => {
+    const { provider, getWs } = setup();
+    const sessionPromise = provider.connect(baseOptions);
+    const ws = getWs();
+    ws.simulateOpen();
+    await sessionPromise;
+
+    const update = parseSent(ws).find((m) => m.type === 'session.update')!;
+    const session = update.session as Record<string, unknown>;
+    expect(session.tools).toBeUndefined();
+    expect(session.tool_choice).toBeUndefined();
+  });
+
+  it('sendToolResult envía function_call_output + response.create', async () => {
+    const { provider, getWs } = setup();
+    const sessionPromise = provider.connect(baseOptions);
+    const ws = getWs();
+    ws.simulateOpen();
+    const session = await sessionPromise;
+
+    session.sendToolResult('call_1', 'son las 12');
+
+    const sent = parseSent(ws);
+    const item = sent.find((m) => m.type === 'conversation.item.create')!;
+    expect(item.item).toEqual({
+      type: 'function_call_output',
+      call_id: 'call_1',
+      output: 'son las 12',
+    });
+    // El resultado de la tool va inmediatamente seguido de response.create (orden y adyacencia).
+    expect(sent.map((m) => m.type).slice(-2)).toEqual([
+      'conversation.item.create',
+      'response.create',
+    ]);
+  });
 });

@@ -3,6 +3,8 @@ import type {
   RealtimeConnectOptions,
   RealtimeModelProvider,
   RealtimeModelSession,
+  RealtimeTool,
+  RealtimeToolCall,
 } from './realtime-model-provider';
 
 /**
@@ -18,6 +20,10 @@ export interface MockRealtimeSession extends RealtimeModelSession {
   readonly interrupts: number;
   /** Número de llamadas a `close`. */
   readonly closes: number;
+  /** Tools recibidas en `connect` (vía las opciones). */
+  readonly tools: RealtimeTool[] | undefined;
+  /** Resultados devueltos vía `sendToolResult`, en orden. */
+  readonly toolResults: { callId: string; output: string }[];
 }
 
 /**
@@ -43,15 +49,22 @@ export interface MockRealtimeProvider extends RealtimeModelProvider {
   emitResponseDone(): void;
   /** Emite un error del modelo (`onError`). */
   emitError(error: Error): void;
+  /** Emite una llamada a tool del modelo (`onToolCall`). */
+  emitToolCall(call: RealtimeToolCall): void;
 }
 
-function createSession(): MockRealtimeSession {
+function createSession(tools: RealtimeTool[] | undefined): MockRealtimeSession {
   const sentAudio: Uint8Array[] = [];
+  const toolResults: { callId: string; output: string }[] = [];
   let commits = 0;
   let interrupts = 0;
   let closes = 0;
   return {
     sentAudio,
+    // Copia defensiva: igual que `sentAudio`/`toolResults`, el snapshot no debe verse
+    // afectado si el llamante muta el array tras `connect`.
+    tools: tools !== undefined ? [...tools] : undefined,
+    toolResults,
     get commits() {
       return commits;
     },
@@ -69,6 +82,9 @@ function createSession(): MockRealtimeSession {
     },
     interrupt(): void {
       interrupts++;
+    },
+    sendToolResult(callId: string, output: string): void {
+      toolResults.push({ callId, output });
     },
     close(): Promise<void> {
       closes++;
@@ -91,7 +107,7 @@ export function createMockRealtimeProvider(): MockRealtimeProvider {
     },
     connect(options: RealtimeConnectOptions): Promise<RealtimeModelSession> {
       lastOptions = options;
-      const session = createSession();
+      const session = createSession(options.tools);
       lastSession = session;
       // Simula la apertura inmediata de la conexión, como el provider real.
       options.onOpen?.();
@@ -114,6 +130,9 @@ export function createMockRealtimeProvider(): MockRealtimeProvider {
     },
     emitError(error: Error): void {
       lastOptions?.onError?.(error);
+    },
+    emitToolCall(call: RealtimeToolCall): void {
+      lastOptions?.onToolCall?.(call);
     },
   };
 }

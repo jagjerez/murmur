@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { AssistantState } from '@murmur/shared';
 import { createMockRealtimeProvider } from './mock-realtime';
-import type { RealtimeConnectOptions } from './realtime-model-provider';
+import type { RealtimeConnectOptions, RealtimeTool } from './realtime-model-provider';
 
 const BASE: RealtimeConnectOptions = { apiKey: 'k', model: 'm' };
 
@@ -99,5 +99,30 @@ describe('createMockRealtimeProvider', () => {
     const provider = createMockRealtimeProvider();
     expect(() => provider.emitState('idle')).not.toThrow();
     expect(() => provider.emitAudio(new Uint8Array())).not.toThrow();
+  });
+});
+
+const tool: RealtimeTool = { type: 'function', name: 'demo', description: 'd', parameters: {} };
+
+describe('createMockRealtimeProvider — function-calling', () => {
+  it('la sesión captura las tools pasadas en connect', async () => {
+    const provider = createMockRealtimeProvider();
+    await provider.connect({ apiKey: 'k', model: 'm', tools: [tool] });
+    expect(provider.lastSession?.tools).toEqual([tool]);
+  });
+
+  it('emitToolCall invoca onToolCall con la llamada', async () => {
+    const provider = createMockRealtimeProvider();
+    const onToolCall = vi.fn();
+    await provider.connect({ apiKey: 'k', model: 'm', onToolCall });
+    provider.emitToolCall({ callId: 'c1', name: 'demo', arguments: { a: 1 } });
+    expect(onToolCall).toHaveBeenCalledWith({ callId: 'c1', name: 'demo', arguments: { a: 1 } });
+  });
+
+  it('sendToolResult queda registrado en toolResults', async () => {
+    const provider = createMockRealtimeProvider();
+    const session = await provider.connect({ apiKey: 'k', model: 'm' });
+    session.sendToolResult('c1', 'resultado');
+    expect(provider.lastSession?.toolResults).toEqual([{ callId: 'c1', output: 'resultado' }]);
   });
 });

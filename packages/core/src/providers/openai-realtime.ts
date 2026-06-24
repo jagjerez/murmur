@@ -89,6 +89,14 @@ class OpenAIRealtimeSession implements RealtimeModelSession {
     this.send({ type: 'input_audio_buffer.clear' });
   }
 
+  sendToolResult(callId: string, output: string): void {
+    this.send({
+      type: 'conversation.item.create',
+      item: { type: 'function_call_output', call_id: callId, output },
+    });
+    this.send({ type: 'response.create' });
+  }
+
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
@@ -118,6 +126,11 @@ class OpenAIRealtimeSession implements RealtimeModelSession {
     if (this.options.voice !== undefined) session.voice = this.options.voice;
     if (this.options.instructions !== undefined) {
       session.instructions = this.options.instructions;
+    }
+    // `tools: []` equivale a omitirlo: no declaramos tools ni enviamos un `tool_choice` vacío.
+    if (this.options.tools !== undefined && this.options.tools.length > 0) {
+      session.tools = this.options.tools;
+      session.tool_choice = 'auto';
     }
     this.send({ type: 'session.update', session });
     this.options.onOpen?.();

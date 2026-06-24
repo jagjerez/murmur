@@ -17,6 +17,8 @@ import type { Session } from '@murmur/shared';
 import type {
   RealtimeModelProvider,
   RealtimeModelSession,
+  RealtimeTool,
+  RealtimeToolCall,
 } from './providers/realtime-model-provider';
 import { buildSystemPrompt, type PromptLocale } from './prompt';
 
@@ -59,6 +61,10 @@ export interface OrchestratorDeps {
   retriever?: IndexingRetriever;
   summarizer?: SessionSummarizer;
   factExtractor?: FactExtractor;
+  /** Tools que el modelo puede invocar; se pasan al realtime al conectar. */
+  tools?: RealtimeTool[];
+  /** Ejecuta una tool por nombre con los args parseados y devuelve su salida como texto. */
+  dispatchTool?: (name: string, args: Record<string, unknown>) => Promise<string>;
   /** Controles de privacidad; ver `OrchestratorPrivacy`. */
   privacy?: OrchestratorPrivacy;
   /** Idioma base de la persona del system prompt (es por defecto). */
@@ -153,6 +159,15 @@ export class ConversationOrchestrator {
       model: connection.model,
       ...(connection.voice !== undefined ? { voice: connection.voice } : {}),
       instructions,
+      // tools y onToolCall van acoplados: sólo registramos el manejador si declaramos tools
+      // (sin tools el modelo no puede emitir tool-calls). Si faltara `dispatchTool`, `runToolCall`
+      // hace no-op de forma segura.
+      ...(this.deps.tools !== undefined
+        ? {
+            tools: this.deps.tools,
+            onToolCall: (call: RealtimeToolCall) => this.handleToolCall(call),
+          }
+        : {}),
       onState: (s) => this.handleState(s),
       onAudio: (chunk) => this.handleAudio(chunk),
       onUserTranscript: (text) => this.handleUserTranscript(text),
@@ -264,6 +279,30 @@ export class ConversationOrchestrator {
     this.setState('error');
     this.closeOutputStream();
     this.deps.onError?.(err);
+  }
+
+  /**
+   * El modelo pidió ejecutar una tool. Se despacha fire-and-forget: un fallo del `dispatchTool`
+   * se convierte en un output de error (que el modelo gestiona), nunca cambia el estado a `error`
+   * ni rompe la sesión.
+   */
+  private handleToolCall(call: RealtimeToolCall): void {
+    void this.runToolCall(call);
+  }
+
+  private async runToolCall(call: RealtimeToolCall): Promise<void> {
+    const dispatchTool = this.deps.dispatchTool;
+    // Snapshot de la sesión: si `endSession` corre durante el dispatch, `sendToolResult` sobre
+    // la sesión ya cerrada es no-op seguro (el provider real lo descarta vía su guard `closed`).
+    const session = this.session;
+    if (dispatchTool === undefined || session === undefined) return;
+    let output: string;
+    try {
+      output = await dispatchTool(call.name, call.arguments);
+    } catch (err) {
+      output = err instanceof Error ? err.message : String(err);
+    }
+    session.sendToolResult(call.callId, output);
   }
 
   /** Al terminar la respuesta: persistir el transcript del asistente y cerrar la salida. */

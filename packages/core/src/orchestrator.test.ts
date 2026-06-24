@@ -479,3 +479,61 @@ describe('ConversationOrchestrator (privacidad)', () => {
     ]);
   });
 });
+
+describe('ConversationOrchestrator (function-calling)', () => {
+  it('pasa las tools al realtime y despacha una tool-call devolviendo el resultado', async () => {
+    const realtime = createMockRealtimeProvider();
+    const store = createSqliteStore(':memory:');
+    const dispatchTool = vi.fn(async () => 'son las 12');
+    const tools = [
+      { type: 'function' as const, name: 'current_time', description: 'd', parameters: {} },
+    ];
+    const orch = new ConversationOrchestrator({
+      realtime,
+      input: createMockVoiceInput([]),
+      output: createMemoryVoiceOutput(),
+      conversation: store.conversation,
+      connection: { apiKey: 'k', model: 'm' },
+      tools,
+      dispatchTool,
+    });
+
+    await orch.startSession();
+    expect(realtime.lastSession?.tools?.map((t) => t.name)).toEqual(['current_time']);
+
+    realtime.emitToolCall({ callId: 'c1', name: 'current_time', arguments: { tz: 'utc' } });
+    await vi.waitFor(() =>
+      expect(dispatchTool).toHaveBeenCalledWith('current_time', { tz: 'utc' }),
+    );
+    await vi.waitFor(() =>
+      expect(realtime.lastSession?.toolResults).toEqual([{ callId: 'c1', output: 'son las 12' }]),
+    );
+  });
+
+  it('un dispatchTool que rechaza devuelve un output de error y no cambia a estado error', async () => {
+    const realtime = createMockRealtimeProvider();
+    const store = createSqliteStore(':memory:');
+    const states: AssistantState[] = [];
+    const dispatchTool = vi.fn(async () => {
+      throw new Error('boom');
+    });
+    const orch = new ConversationOrchestrator({
+      realtime,
+      input: createMockVoiceInput([]),
+      output: createMemoryVoiceOutput(),
+      conversation: store.conversation,
+      connection: { apiKey: 'k', model: 'm' },
+      tools: [{ type: 'function' as const, name: 'x', description: 'd', parameters: {} }],
+      dispatchTool,
+      onStateChange: (s) => states.push(s),
+    });
+
+    await orch.startSession();
+    realtime.emitToolCall({ callId: 'c1', name: 'x', arguments: {} });
+
+    await vi.waitFor(() =>
+      expect(realtime.lastSession?.toolResults).toEqual([{ callId: 'c1', output: 'boom' }]),
+    );
+    expect(states).not.toContain('error');
+  });
+});

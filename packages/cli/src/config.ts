@@ -11,6 +11,9 @@ export type Theme = 'system' | 'dark' | 'light';
  */
 export type TranscriptionMode = 'realtime' | 'whisper-api' | 'local-whisper';
 
+/** Modo de operación de la app: cloud (OpenAI) u offline (modelos locales). */
+export type AppMode = 'cloud' | 'offline';
+
 /** Configuración del wake word ("hey murmur") como fuente de activación. */
 export interface WakeWordConfig {
   /** Si `true`, la app arranca el detector de wake word junto al hotkey. */
@@ -41,6 +44,8 @@ export interface MurmurConfig {
   theme: Theme;
   /** Modo de transcripción a usar (default `realtime`). */
   transcription: TranscriptionMode;
+  /** Modo de operación: cloud (OpenAI) u offline (modelos locales). Default `cloud`. */
+  mode: AppMode;
   privacy: PrivacyConfig;
   /** Activación por wake word ("hey murmur"). */
   wakeWord: WakeWordConfig;
@@ -65,6 +70,7 @@ export const DEFAULT_CONFIG: Omit<MurmurConfig, 'openaiApiKey'> = {
   voice: 'alloy',
   theme: 'system',
   transcription: 'realtime',
+  mode: 'cloud',
   privacy: DEFAULT_PRIVACY,
   wakeWord: DEFAULT_WAKE_WORD,
 };
@@ -80,6 +86,13 @@ export const VALID_TRANSCRIPTION_MODES: readonly TranscriptionMode[] = [
 /** `true` si `value` es un `TranscriptionMode` válido. */
 export function isTranscriptionMode(value: string): value is TranscriptionMode {
   return (VALID_TRANSCRIPTION_MODES as readonly string[]).includes(value);
+}
+
+export const VALID_MODES: readonly AppMode[] = ['cloud', 'offline'];
+
+/** `true` si `value` es un `AppMode` válido. */
+export function isMode(value: string): value is AppMode {
+  return (VALID_MODES as readonly string[]).includes(value);
 }
 
 /** Persistencia de la configuración de murmur en `<base>/config.json`. */
@@ -164,6 +177,14 @@ export class ConfigStore {
     return this.save({ transcription: mode });
   }
 
+  /** Fija el modo de operación (cloud/offline) y lo persiste. */
+  setMode(mode: AppMode): MurmurConfig {
+    if (!isMode(mode)) {
+      throw new ConfigError(`Modo inválido "${String(mode)}" (usa: ${VALID_MODES.join(', ')}).`);
+    }
+    return this.save({ mode });
+  }
+
   /** Combina `patch` sobre la privacidad actual (normalizada) y la persiste. */
   setPrivacy(patch: Partial<PrivacyConfig>): MurmurConfig {
     const current = this.load().privacy;
@@ -231,6 +252,9 @@ function normalize(raw: Record<string, unknown>): MurmurConfig {
   }
   if (typeof raw.transcription === 'string' && isTranscriptionMode(raw.transcription)) {
     config.transcription = raw.transcription;
+  }
+  if (typeof raw.mode === 'string' && isMode(raw.mode)) {
+    config.mode = raw.mode;
   }
   if (raw.privacy !== null && typeof raw.privacy === 'object' && !Array.isArray(raw.privacy)) {
     config.privacy = normalizePrivacy(raw.privacy as Record<string, unknown>);

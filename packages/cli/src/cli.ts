@@ -11,6 +11,8 @@ import {
 import {
   isTranscriptionMode,
   VALID_TRANSCRIPTION_MODES,
+  isMode,
+  VALID_MODES,
   normalizePhrase,
   type ConfigStore,
   type MurmurConfig,
@@ -69,6 +71,8 @@ Comandos:
   config set-transcription <modo>
                                  Fija el modo de transcripción (realtime,
                                  whisper-api, local-whisper)
+  config set-mode <cloud|offline>
+                                 Fija el modo de operación (cloud u offline)
   config set-privacy <campo> <valor>
                                  Cambia un flag de privacidad (localOnlyMode,
                                  storeTranscripts, redactBeforeStore, retentionDays)
@@ -178,6 +182,7 @@ async function cmdStatus(out: Output, deps: CliDeps): Promise<CliResult> {
   out.line(`Voz:      ${config.voice}`);
   out.line(`Tema:     ${config.theme}`);
   out.line(`Transcripción: ${config.transcription}`);
+  out.line(`Modo:     ${config.mode}`);
   out.line(
     `Wake word: ${config.wakeWord.enabled ? 'sí' : 'no'} ("${config.wakeWord.phrase}", sensibilidad ${config.wakeWord.sensitivity})`,
   );
@@ -266,6 +271,23 @@ function cmdConfig(out: Output, deps: CliDeps, sub: string | undefined, rest: st
       }
       const saved = deps.config.setTranscription(mode);
       out.line(`murmur: modo de transcripción guardado (${saved.transcription}).`);
+      return ok(out);
+    }
+
+    case 'set-mode': {
+      const appMode = rest[0];
+      if (!appMode) {
+        out.line('murmur: indica el modo: murmur config set-mode <modo>.');
+        out.line(`  Modos válidos: ${VALID_MODES.join(', ')}.`);
+        return fail(out);
+      }
+      if (!isMode(appMode)) {
+        out.line(`murmur: modo inválido "${appMode}".`);
+        out.line(`  Modos válidos: ${VALID_MODES.join(', ')}.`);
+        return fail(out);
+      }
+      const saved = deps.config.setMode(appMode);
+      out.line(`murmur: modo guardado (${saved.mode}).`);
       return ok(out);
     }
 
@@ -394,6 +416,7 @@ function showConfig(out: Output, config: MurmurConfig): CliResult {
   out.line(`Voz:      ${config.voice}`);
   out.line(`Tema:     ${config.theme}`);
   out.line(`Transcripción: ${config.transcription}`);
+  out.line(`Modo:     ${config.mode}`);
   out.line('Privacidad:');
   out.line(`  Modo local:        ${config.privacy.localOnlyMode ? 'sí' : 'no'}`);
   out.line(`  Guardar transcripciones: ${config.privacy.storeTranscripts ? 'sí' : 'no'}`);

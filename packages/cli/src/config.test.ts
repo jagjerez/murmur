@@ -3,7 +3,13 @@ import { mkdtempSync, rmSync, statSync, writeFileSync, mkdirSync, existsSync } f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ConfigError } from '@murmur/shared';
-import { ConfigStore, DEFAULT_CONFIG, DEFAULT_PRIVACY, DEFAULT_WAKE_WORD } from './config';
+import {
+  ConfigStore,
+  DEFAULT_CONFIG,
+  DEFAULT_PRIVACY,
+  DEFAULT_WAKE_WORD,
+  VALID_MODES,
+} from './config';
 
 describe('ConfigStore', () => {
   let baseDir: string;
@@ -275,6 +281,43 @@ describe('ConfigStore', () => {
         'utf8',
       );
       expect(new ConfigStore(baseDir).load().wakeWord.phrase).toBe('hey murmur');
+    });
+  });
+
+  describe('mode', () => {
+    it('default es cloud', () => {
+      const store = new ConfigStore(baseDir);
+      expect(store.load().mode).toBe('cloud');
+      expect(DEFAULT_CONFIG.mode).toBe('cloud');
+    });
+
+    it('setMode persiste un modo válido', () => {
+      const store = new ConfigStore(baseDir);
+      store.setMode('offline');
+      expect(new ConfigStore(baseDir).load().mode).toBe('offline');
+    });
+
+    it('setMode con modo inválido → ConfigError y no persiste', () => {
+      const store = new ConfigStore(baseDir);
+      expect(() => store.setMode('foo' as never)).toThrow(ConfigError);
+      expect(new ConfigStore(baseDir).load().mode).toBe('cloud');
+    });
+
+    it('normaliza un mode válido del JSON', () => {
+      mkdirSync(baseDir, { recursive: true });
+      writeFileSync(join(baseDir, 'config.json'), JSON.stringify({ mode: 'offline' }), 'utf8');
+      expect(new ConfigStore(baseDir).load().mode).toBe('offline');
+    });
+
+    it('descarta mode inválido del JSON y usa default', () => {
+      mkdirSync(baseDir, { recursive: true });
+      writeFileSync(join(baseDir, 'config.json'), JSON.stringify({ mode: 'no-existe' }), 'utf8');
+      expect(new ConfigStore(baseDir).load().mode).toBe('cloud');
+    });
+
+    it('VALID_MODES contiene cloud y offline', () => {
+      expect(VALID_MODES).toContain('cloud');
+      expect(VALID_MODES).toContain('offline');
     });
   });
 });

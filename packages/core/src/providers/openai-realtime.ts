@@ -64,6 +64,8 @@ class OpenAIRealtimeSession implements RealtimeModelSession {
   private state: AssistantState = 'idle';
   private spokeThisResponse = false;
   private closed = false;
+  /** Llamadas a tool en curso, indexadas por `call_id` (nombre + args acumulados). */
+  private readonly pendingToolCalls = new Map<string, { name: string; args: string }>();
 
   constructor(
     private readonly ws: WebSocketLike,
@@ -143,6 +145,8 @@ class OpenAIRealtimeSession implements RealtimeModelSession {
   private handleClose(): void {
     // El servidor cerró: no es un error por sí mismo; la sesión queda cerrada.
     this.closed = true;
+    // Descarta tool-calls en vuelo: un `.done` que llegue tras el cierre no debe emitir `onToolCall`.
+    this.pendingToolCalls.clear();
   }
 
   private handleMessage(ev: unknown): void {
@@ -188,12 +192,46 @@ class OpenAIRealtimeSession implements RealtimeModelSession {
       case 'response.done':
         this.setState('idle');
         break;
+      case 'response.output_item.added':
+        this.handleOutputItemAdded(event);
+        break;
+      case 'response.function_call_arguments.delta':
+        this.handleToolArgsDelta(event);
+        break;
+      case 'response.function_call_arguments.done':
+        this.handleToolArgsDone(event);
+        break;
       case 'error':
         this.emitError(new ModelError(`OpenAI Realtime: ${this.errorMessage(event.error)}`));
         break;
       default:
         break;
     }
+  }
+
+  private handleOutputItemAdded(event: ServerEvent): void {
+    const item = event.item as Record<string, unknown> | undefined;
+    if (item?.type !== 'function_call') return;
+    if (typeof item.call_id !== 'string' || typeof item.name !== 'string') return;
+    this.pendingToolCalls.set(item.call_id, { name: item.name, args: '' });
+  }
+
+  private handleToolArgsDelta(event: ServerEvent): void {
+    const callId = event.call_id;
+    const delta = event.delta;
+    if (typeof callId !== 'string' || typeof delta !== 'string') return;
+    const pending = this.pendingToolCalls.get(callId);
+    if (pending !== undefined) pending.args += delta;
+  }
+
+  private handleToolArgsDone(event: ServerEvent): void {
+    const callId = event.call_id;
+    if (typeof callId !== 'string') return;
+    const pending = this.pendingToolCalls.get(callId);
+    if (pending === undefined) return; // .done sin output_item.added previo → se ignora
+    this.pendingToolCalls.delete(callId);
+    const raw = typeof event.arguments === 'string' ? event.arguments : pending.args;
+    this.options.onToolCall?.({ callId, name: pending.name, arguments: parseToolArgs(raw) });
   }
 
   private handleAudioDelta(delta: string | undefined): void {
@@ -219,6 +257,16 @@ class OpenAIRealtimeSession implements RealtimeModelSession {
 
 function buildProtocols(apiKey: string): string[] {
   return ['realtime', `openai-insecure-api-key.${apiKey}`, 'openai-beta.realtime-v1'];
+}
+
+function parseToolArgs(raw: string): Record<string, unknown> {
+  if (raw.length === 0) return {};
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
 }
 
 export function createOpenAIRealtimeProvider(deps: OpenAIRealtimeDeps = {}): RealtimeModelProvider {

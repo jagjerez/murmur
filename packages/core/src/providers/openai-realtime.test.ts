@@ -324,4 +324,125 @@ describe('createOpenAIRealtimeProvider', () => {
       'response.create',
     ]);
   });
+
+  it('emite onToolCall al completar los argumentos de una function_call', async () => {
+    const { provider, getWs } = setup();
+    const onToolCall = vi.fn();
+    const sessionPromise = provider.connect({ ...baseOptions, onToolCall });
+    const ws = getWs();
+    ws.simulateOpen();
+    await sessionPromise;
+
+    ws.emitServerEvent({
+      type: 'response.output_item.added',
+      item: { type: 'function_call', name: 'current_time', call_id: 'call_1' },
+    });
+    ws.emitServerEvent({
+      type: 'response.function_call_arguments.delta',
+      call_id: 'call_1',
+      delta: '{"city":',
+    });
+    ws.emitServerEvent({
+      type: 'response.function_call_arguments.done',
+      call_id: 'call_1',
+      arguments: '{"city":"madrid"}',
+    });
+
+    expect(onToolCall).toHaveBeenCalledWith({
+      callId: 'call_1',
+      name: 'current_time',
+      arguments: { city: 'madrid' },
+    });
+  });
+
+  it('argumentos no-JSON se entregan como objeto vacío (no lanza)', async () => {
+    const { provider, getWs } = setup();
+    const onToolCall = vi.fn();
+    const sessionPromise = provider.connect({ ...baseOptions, onToolCall });
+    const ws = getWs();
+    ws.simulateOpen();
+    await sessionPromise;
+
+    ws.emitServerEvent({
+      type: 'response.output_item.added',
+      item: { type: 'function_call', name: 'demo', call_id: 'call_2' },
+    });
+    ws.emitServerEvent({
+      type: 'response.function_call_arguments.done',
+      call_id: 'call_2',
+      arguments: 'no-es-json',
+    });
+
+    expect(onToolCall).toHaveBeenCalledWith({ callId: 'call_2', name: 'demo', arguments: {} });
+  });
+
+  it('un .done sin output_item.added previo se ignora (no emite)', async () => {
+    const { provider, getWs } = setup();
+    const onToolCall = vi.fn();
+    const sessionPromise = provider.connect({ ...baseOptions, onToolCall });
+    const ws = getWs();
+    ws.simulateOpen();
+    await sessionPromise;
+
+    ws.emitServerEvent({
+      type: 'response.function_call_arguments.done',
+      call_id: 'huérfano',
+      arguments: '{}',
+    });
+
+    expect(onToolCall).not.toHaveBeenCalled();
+  });
+
+  it('si .done no trae arguments, usa los deltas acumulados', async () => {
+    const { provider, getWs } = setup();
+    const onToolCall = vi.fn();
+    const sessionPromise = provider.connect({ ...baseOptions, onToolCall });
+    const ws = getWs();
+    ws.simulateOpen();
+    await sessionPromise;
+
+    ws.emitServerEvent({
+      type: 'response.output_item.added',
+      item: { type: 'function_call', name: 'demo', call_id: 'call_3' },
+    });
+    ws.emitServerEvent({
+      type: 'response.function_call_arguments.delta',
+      call_id: 'call_3',
+      delta: '{"city":',
+    });
+    ws.emitServerEvent({
+      type: 'response.function_call_arguments.delta',
+      call_id: 'call_3',
+      delta: '"madrid"}',
+    });
+    ws.emitServerEvent({ type: 'response.function_call_arguments.done', call_id: 'call_3' });
+
+    expect(onToolCall).toHaveBeenCalledWith({
+      callId: 'call_3',
+      name: 'demo',
+      arguments: { city: 'madrid' },
+    });
+  });
+
+  it('descarta tool-calls en vuelo al cerrar: un .done posterior no emite', async () => {
+    const { provider, getWs } = setup();
+    const onToolCall = vi.fn();
+    const sessionPromise = provider.connect({ ...baseOptions, onToolCall });
+    const ws = getWs();
+    ws.simulateOpen();
+    const session = await sessionPromise;
+
+    ws.emitServerEvent({
+      type: 'response.output_item.added',
+      item: { type: 'function_call', name: 'demo', call_id: 'call_4' },
+    });
+    await session.close();
+    ws.emitServerEvent({
+      type: 'response.function_call_arguments.done',
+      call_id: 'call_4',
+      arguments: '{"a":1}',
+    });
+
+    expect(onToolCall).not.toHaveBeenCalled();
+  });
 });

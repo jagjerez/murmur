@@ -1,12 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { HotkeyManager, RealtimeModelProvider } from '@murmur/core';
-import { createOpenAIRealtimeProvider } from '@murmur/core';
+import type {
+  HotkeyManager,
+  RealtimeModelProvider,
+  TranscriptionProvider,
+  TextToSpeechProvider,
+} from '@murmur/core';
+import {
+  createOpenAIRealtimeProvider,
+  createLocalWhisperProvider,
+  createPiperTtsProvider,
+} from '@murmur/core';
+import { invoke } from '@tauri-apps/api/core';
+import type { ChatProvider } from '@murmur/rag';
+import { createOllamaChatProvider } from '@murmur/rag';
 import type { AudioDeviceManager, VoiceInputProvider, VoiceOutputProvider } from '@murmur/audio';
 import { Capsule } from './components/Capsule';
 import { Onboarding, type RequestMic } from './components/Onboarding';
 import { Settings } from './components/Settings';
 import { Transcript } from './components/Transcript';
-import { useMurmur } from './use-murmur';
+import { useMurmur, type MurmurController } from './use-murmur';
+import { useOfflineMurmur } from './offline/use-offline-murmur';
 import { useAudioLevel } from './audio/use-audio-level';
 import { createTauriHotkeyManager } from './hotkey/tauri-hotkey-manager';
 import {
@@ -16,6 +29,8 @@ import {
 } from './audio/web-audio';
 import { createTauriConfigClient, type ConfigClient, type ThemePref } from './config/config-client';
 import { createDesktopToolHost, type ToolHost } from './plugins/desktop-plugins';
+import { createTauriLocalWhisperRun } from './offline/local-whisper-run';
+import { createTauriPiperRun } from './offline/piper-tts-run';
 
 export interface AppProps {
   /** Configuración persistida. Por defecto Tauri (degrada a memoria fuera de Tauri). */
@@ -34,6 +49,12 @@ export interface AppProps {
   requestMic?: RequestMic;
   /** Host de tools (plugins) para function-calling. Por defecto los plugins del webview. */
   toolHost?: ToolHost;
+  /** Proveedor de transcripción offline (inyectable en tests). */
+  transcription?: TranscriptionProvider;
+  /** Proveedor de chat offline (inyectable en tests). */
+  chat?: ChatProvider;
+  /** Proveedor TTS offline (inyectable en tests). */
+  tts?: TextToSpeechProvider;
 }
 
 function applyTheme(theme: ThemePref): void {
@@ -46,11 +67,146 @@ function applyTheme(theme: ThemePref): void {
 }
 
 /**
- * Shell de la app. Lee la config: sin API key muestra el onboarding; con API key
- * muestra la cápsula (cuyo estado refleja el orchestrator vía `useMurmur`), el acceso
- * a ajustes y la transcripción alternable. El hotkey global (registrado por `useMurmur`)
- * dispara la captura. Todas las dependencias se inyectan; los defaults son las impls
- * reales (Tauri/Web/OpenAI) y en tests se pasan mocks.
+ * Shell presentacional: renderiza la barra de herramientas, ajustes opcionales,
+ * transcripción y cápsula. Driven by any `MurmurController` (cloud u offline).
+ */
+function CapsuleShell({
+  controller,
+  input,
+  config,
+  devices,
+}: {
+  controller: MurmurController;
+  input: VoiceInputProvider;
+  config: ConfigClient;
+  devices: AudioDeviceManager;
+}) {
+  const [showSettings, setShowSettings] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(true);
+
+  // Nivel real del ecualizador: sólo mientras se está capturando (escuchando).
+  const capturing = controller.capsuleState === 'listening';
+  const level = useAudioLevel(capturing ? input : undefined, capturing);
+
+  return (
+    <>
+      <div className="app-toolbar">
+        <button type="button" onClick={() => setShowSettings((v) => !v)}>
+          Ajustes
+        </button>
+        <button
+          type="button"
+          aria-pressed={showTranscript}
+          onClick={() => setShowTranscript((v) => !v)}
+        >
+          Transcripción
+        </button>
+      </div>
+
+      {showSettings && (
+        <Settings
+          config={config}
+          devices={devices}
+          connection={controller.connection}
+          onTheme={applyTheme}
+        />
+      )}
+
+      <Transcript lines={controller.transcript} visible={showTranscript} />
+
+      <Capsule
+        state={controller.capsuleState}
+        mode="push-to-talk"
+        anchor="bottom-center"
+        capturing={capturing}
+        level={level}
+        onPress={() => void controller.startCapture()}
+        onRelease={() => void controller.stopCapture()}
+        onCancel={() => void controller.stopCapture()}
+      />
+    </>
+  );
+}
+
+/** Shell que usa el orquestador cloud (OpenAI Realtime). */
+function CloudShell({
+  config,
+  realtime,
+  input,
+  output,
+  hotkey,
+  devices,
+  tools,
+  dispatchTool,
+}: {
+  config: ConfigClient;
+  realtime: RealtimeModelProvider;
+  input: VoiceInputProvider;
+  output: VoiceOutputProvider;
+  hotkey: HotkeyManager;
+  devices: AudioDeviceManager;
+  tools?: ToolHost['tools'];
+  dispatchTool?: ToolHost['dispatchTool'];
+}) {
+  const murmur = useMurmur({ config, realtime, input, output, hotkey, tools, dispatchTool });
+  return <CapsuleShell controller={murmur} input={input} config={config} devices={devices} />;
+}
+
+/** Shell que usa el orquestador offline (STT+LLM+TTS locales). */
+function OfflineShell({
+  config,
+  input,
+  output,
+  hotkey,
+  devices,
+  transcription,
+  chat,
+  tts,
+}: {
+  config: ConfigClient;
+  input: VoiceInputProvider;
+  output: VoiceOutputProvider;
+  hotkey: HotkeyManager;
+  devices: AudioDeviceManager;
+  transcription?: TranscriptionProvider;
+  chat?: ChatProvider;
+  tts?: TextToSpeechProvider;
+}) {
+  // Providers offline construidos una vez (perezosamente en refs). Sólo se construyen
+  // cuando se monta OfflineShell; el cloud path nunca los crea.
+  const transcriptionRef = useRef<TranscriptionProvider | null>(null);
+  if (transcriptionRef.current === null) {
+    transcriptionRef.current =
+      transcription ?? createLocalWhisperProvider({ run: createTauriLocalWhisperRun({ invoke }) });
+  }
+  const chatRef = useRef<ChatProvider | null>(null);
+  if (chatRef.current === null) {
+    chatRef.current = chat ?? createOllamaChatProvider({ model: 'llama3' });
+  }
+  const ttsRef = useRef<TextToSpeechProvider | null>(null);
+  if (ttsRef.current === null) {
+    ttsRef.current = tts ?? createPiperTtsProvider({ run: createTauriPiperRun({ invoke }) });
+  }
+
+  const murmur = useOfflineMurmur({
+    config,
+    input,
+    output,
+    transcription: transcriptionRef.current,
+    chat: chatRef.current,
+    tts: ttsRef.current,
+    hotkey,
+  });
+  return <CapsuleShell controller={murmur} input={input} config={config} devices={devices} />;
+}
+
+/**
+ * Shell de la app. Lee la config y enruta por modo: `offline` monta `OfflineShell`
+ * (orquestador local vía `useOfflineMurmur`, sin API key); en `cloud`, sin API key muestra el
+ * onboarding y con key monta `CloudShell` (orquestador realtime vía `useMurmur`). Ambos renderizan
+ * la `CapsuleShell` común (cápsula + ajustes + transcripción) y el hotkey global dispara la captura.
+ * Todas las dependencias se inyectan; los defaults son las impls reales (Tauri/Web/OpenAI) y en
+ * tests se pasan mocks.
  */
 export function App({
   config,
@@ -61,6 +217,9 @@ export function App({
   devices,
   requestMic,
   toolHost,
+  transcription,
+  chat,
+  tts,
 }: AppProps = {}) {
   // Defaults reales, construidos una vez. En tests se inyectan mocks.
   const configRef = useRef<ConfigClient | null>(null);
@@ -82,13 +241,13 @@ export function App({
   if (toolHostRef.current === null) toolHostRef.current = toolHost ?? createDesktopToolHost();
 
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showTranscript, setShowTranscript] = useState(true);
+  const [mode, setMode] = useState<'cloud' | 'offline' | null>(null);
 
-  // Carga inicial: ¿hay API key y qué tema aplicar?
+  // Carga inicial: ¿hay API key, qué modo y qué tema aplicar?
   const refreshConfig = useCallback(async (): Promise<void> => {
     const view = await configRef.current!.get();
     setHasApiKey(view.hasApiKey);
+    setMode(view.mode);
     applyTheme(view.theme);
   }, []);
 
@@ -96,33 +255,36 @@ export function App({
     void refreshConfig();
   }, [refreshConfig]);
 
-  const murmur = useMurmur({
-    config: configRef.current,
-    realtime: realtimeRef.current,
-    input: inputRef.current,
-    output: outputRef.current,
-    hotkey: hotkeyRef.current,
-    tools: toolHostRef.current.tools,
-    dispatchTool: toolHostRef.current.dispatchTool,
-  });
-
-  // Nivel real del ecualizador: sólo mientras se está capturando (escuchando).
-  const capturing = murmur.capsuleState === 'listening';
-  const level = useAudioLevel(capturing ? inputRef.current : undefined, capturing);
-
   const handleOnboardingComplete = useCallback((): void => {
     void refreshConfig();
   }, [refreshConfig]);
 
-  // Aún no sabemos si hay key (primer render asíncrono): no parpadear.
-  if (hasApiKey === null) {
+  // Aún no sabemos si hay key o modo (primer render asíncrono): no parpadear.
+  if (hasApiKey === null || mode === null) {
     return null;
   }
 
+  // Modo offline: no requiere API key; nunca muestra onboarding.
+  if (mode === 'offline') {
+    return (
+      <OfflineShell
+        config={configRef.current!}
+        input={inputRef.current!}
+        output={outputRef.current!}
+        hotkey={hotkeyRef.current!}
+        devices={devicesRef.current!}
+        transcription={transcription}
+        chat={chat}
+        tts={tts}
+      />
+    );
+  }
+
+  // Modo cloud: si no hay key, mostrar onboarding.
   if (!hasApiKey) {
     return (
       <Onboarding
-        config={configRef.current}
+        config={configRef.current!}
         {...(requestMic ? { requestMic } : {})}
         onComplete={handleOnboardingComplete}
       />
@@ -130,41 +292,15 @@ export function App({
   }
 
   return (
-    <>
-      <div className="app-toolbar">
-        <button type="button" onClick={() => setShowSettings((v) => !v)}>
-          Ajustes
-        </button>
-        <button
-          type="button"
-          aria-pressed={showTranscript}
-          onClick={() => setShowTranscript((v) => !v)}
-        >
-          Transcripción
-        </button>
-      </div>
-
-      {showSettings && (
-        <Settings
-          config={configRef.current}
-          devices={devicesRef.current}
-          connection={murmur.connection}
-          onTheme={applyTheme}
-        />
-      )}
-
-      <Transcript lines={murmur.transcript} visible={showTranscript} />
-
-      <Capsule
-        state={murmur.capsuleState}
-        mode="push-to-talk"
-        anchor="bottom-center"
-        capturing={capturing}
-        level={level}
-        onPress={() => void murmur.startCapture()}
-        onRelease={() => void murmur.stopCapture()}
-        onCancel={() => void murmur.stopCapture()}
-      />
-    </>
+    <CloudShell
+      config={configRef.current!}
+      realtime={realtimeRef.current!}
+      input={inputRef.current!}
+      output={outputRef.current!}
+      hotkey={hotkeyRef.current!}
+      devices={devicesRef.current!}
+      tools={toolHostRef.current!.tools}
+      dispatchTool={toolHostRef.current!.dispatchTool}
+    />
   );
 }

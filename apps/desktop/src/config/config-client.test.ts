@@ -75,6 +75,7 @@ describe('createMockConfigClient', () => {
       voice: 'sol',
       model: 'gpt-realtime-mini',
       theme: 'dark',
+      mode: 'offline',
     });
     const view = await client.get();
     expect(view.hasApiKey).toBe(true);
@@ -82,6 +83,7 @@ describe('createMockConfigClient', () => {
     expect(view.voice).toBe('sol');
     expect(view.model).toBe('gpt-realtime-mini');
     expect(view.theme).toBe('dark');
+    expect(view.mode).toBe('offline');
   });
 
   it('expone la key completa solo vía readApiKey (uso interno, nunca al render)', async () => {

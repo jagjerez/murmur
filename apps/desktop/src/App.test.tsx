@@ -1,7 +1,13 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, cleanup, act, waitFor, fireEvent } from '@testing-library/react';
-import { createMemoryHotkeyManager, createMockRealtimeProvider } from '@murmur/core';
+import {
+  createMemoryHotkeyManager,
+  createMockRealtimeProvider,
+  createMockTranscriptionProvider,
+  createMockTextToSpeechProvider,
+} from '@murmur/core';
 import { createMockVoiceInput, createMemoryVoiceOutput } from '@murmur/audio';
+import { createMockChatProvider } from '@murmur/rag';
 import { createMockConfigClient } from './config/config-client';
 import { App, type AppProps } from './App';
 
@@ -100,6 +106,30 @@ describe('App shell — onboarding vs cápsula', () => {
 
   it('no rompe sin deps (usa defaults: Tauri/Web, no-op fuera de Tauri)', () => {
     expect(() => render(<App />)).not.toThrow();
+  });
+
+  it('en modo offline usa el orquestador local (un turno transcribe→responde→habla)', async () => {
+    const hotkey = createMemoryHotkeyManager();
+    const config = createMockConfigClient({ apiKey: '', mode: 'offline' }); // sin key; modo offline
+    const transcription = createMockTranscriptionProvider('hola', 'local-whisper');
+    const chat = createMockChatProvider(() => 'respuesta local');
+    const tts = createMockTextToSpeechProvider(new Uint8Array([7]));
+    render(
+      <App
+        {...baseProps({ hotkey, config })}
+        transcription={transcription}
+        chat={chat}
+        tts={tts}
+      />,
+    );
+    await screen.findByRole('status'); // la cápsula aparece sin onboarding
+    await waitFor(() => expect(hotkey.registered().length).toBeGreaterThan(0));
+    await act(async () => {
+      hotkey.trigger(hotkey.registered()[0]!);
+    });
+    await act(async () => {}); // deja correr el turno
+    // El estado vuelve a idle y la cápsula sigue presente (turno completado).
+    await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
   });
 
   it('el modelo puede invocar una tool y recibe el resultado (function-calling end-to-end)', async () => {

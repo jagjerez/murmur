@@ -14,6 +14,9 @@
 
 export type ThemePref = 'dark' | 'light' | 'system';
 
+/** Modo de operación del orquestador: cloud (OpenAI Realtime) u offline (STT+LLM+TTS locales). */
+export type ModePref = 'cloud' | 'offline';
+
 /** Vista del wake word en el render (sin secretos): activación por frase de voz. */
 export interface WakeWordView {
   enabled: boolean;
@@ -31,6 +34,8 @@ export interface ConfigView {
   voice: string;
   model: string;
   theme: ThemePref;
+  /** Modo de operación: cloud (por defecto) u offline. */
+  mode: ModePref;
   /** Config del wake word ("hey murmur"). */
   wakeWord: WakeWordView;
 }
@@ -58,6 +63,7 @@ export interface ConfigInitial {
   voice?: string;
   model?: string;
   theme?: ThemePref;
+  mode?: ModePref;
   wakeWord?: Partial<WakeWordView>;
 }
 
@@ -67,6 +73,7 @@ export const CONFIG_DEFAULTS = {
   voice: 'verse',
   model: 'gpt-realtime',
   theme: 'system' as ThemePref,
+  mode: 'cloud' as ModePref,
   wakeWord: { enabled: false, phrase: 'hey murmur', sensitivity: 0.5 } as WakeWordView,
 } as const;
 
@@ -89,6 +96,7 @@ interface ConfigState {
   voice: string;
   model: string;
   theme: ThemePref;
+  mode: ModePref;
   wakeWord: WakeWordView;
 }
 
@@ -101,6 +109,7 @@ function viewOf(state: ConfigState): ConfigView {
     voice: state.voice,
     model: state.model,
     theme: state.theme,
+    mode: state.mode,
     wakeWord: { ...state.wakeWord },
   };
 }
@@ -113,6 +122,7 @@ export function createMockConfigClient(initial: ConfigInitial = {}): ConfigClien
     voice: initial.voice ?? CONFIG_DEFAULTS.voice,
     model: initial.model ?? CONFIG_DEFAULTS.model,
     theme: initial.theme ?? CONFIG_DEFAULTS.theme,
+    mode: initial.mode ?? CONFIG_DEFAULTS.mode,
     wakeWord: { ...CONFIG_DEFAULTS.wakeWord, ...initial.wakeWord },
   };
 
@@ -158,6 +168,7 @@ interface RustConfigView {
   voice: string;
   model: string;
   theme: string;
+  mode?: string | null;
   wake_word?: {
     enabled?: boolean;
     phrase?: string;
@@ -167,6 +178,10 @@ interface RustConfigView {
 
 function themeOf(value: string): ThemePref {
   return value === 'dark' || value === 'light' ? value : 'system';
+}
+
+function modeOf(value: string | null | undefined): ModePref {
+  return value === 'offline' ? 'offline' : 'cloud';
 }
 
 /** Mapea el wake word del backend a la vista, con defaults si falta o llega parcial. */
@@ -215,6 +230,7 @@ export function createTauriConfigClient(): ConfigClient {
         voice: raw.voice,
         model: raw.model,
         theme: themeOf(raw.theme),
+        mode: modeOf(raw.mode),
         wakeWord: wakeWordOf(raw.wake_word),
       };
     },

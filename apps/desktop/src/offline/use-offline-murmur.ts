@@ -12,6 +12,7 @@ import type { ConfigClient } from '../config/config-client';
 import { createMemoryConversationStore } from '../conversation/memory-conversation-store';
 import type { ConnectionStatus } from '../components/Settings';
 import type { TranscriptLine } from '../components/Transcript';
+import type { MurmurController } from '../use-murmur';
 
 /** Dependencias inyectables del controlador offline. Defaults reales en `App`, mocks en tests. */
 export interface OfflineMurmurDeps {
@@ -26,16 +27,6 @@ export interface OfflineMurmurDeps {
   conversation?: ConversationStore;
   /** ID del dispositivo de entrada a usar (micrófono seleccionado). */
   deviceId?: string;
-}
-
-export interface MurmurController {
-  capsuleState: AssistantState;
-  connection: ConnectionStatus;
-  transcript: TranscriptLine[];
-  /** Arranca sesión (si hace falta) y comienza la captura. */
-  startCapture: () => Promise<void>;
-  /** Detiene la captura y confirma el turno. */
-  stopCapture: () => Promise<void>;
 }
 
 /**

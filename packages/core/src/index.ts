@@ -5,6 +5,7 @@ export * from './providers/whisper';
 export * from './providers/openai-realtime';
 export * from './providers/mock-realtime';
 export * from './providers/fake-websocket';
+export * from './providers/tts-provider';
 export * from './hotkey';
 export * from './wake-word';
 export * from './prompt';

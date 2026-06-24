@@ -220,3 +220,19 @@
     alcance: builds nativas Tauri + publish npm (credenciales/deps de sistema), modelos reales de wake word y
     whisper local (los aporta el usuario), y el detector de wake word concreto en `App.tsx` (necesita audio
     nativo + modelo).
+- **Modo offline (2026-06-24, rama `feature/offline-mode`):** spec/plan en `docs/superpowers/`. Conversación
+  **sin nube** por turnos `captura → STT → LLM → TTS → reproducción`, con la nube como default. Implementado
+  por subagentes (TDD, R1–R5, review por tarea + review holístico final). R1 (arquitectura, mocks): interfaz
+  `TextToSpeechProvider` (+ mock) y `OfflineConversationOrchestrator` (loop por turnos; `startListening` guarda
+  el stream y `stopListening` lo drena y corre el pipeline; errores→`error`+`onError`). R3: `createOllamaChatProvider`
+  (HTTP `/api/chat`, `fetch` inyectable). R4: `createPiperTtsProvider({run})`. R2/R4 nativo: adaptadores TS
+  `createTauriLocalWhisperRun` (resample 24k→16k + `invoke('transcribe')`) y `createTauriPiperRun`; comandos
+  Tauri `transcribe`(whisper-rs)/`tts`(piper) en `src-tauri` tras feature **`offline`** (NO en `packages/native`
+  → `cargo test` del gate intacto; `src-tauri` no compila aquí, verificado por inspección con whisper-rs 0.16).
+  R5: config `mode` (cloud/offline) + `config set-mode`; descargador `murmur models download whisper-large-v3`
+  (→ `~/.murmur/models/ggml-large-v3.bin`, mismo nombre que carga el comando Tauri); `useOfflineMurmur` + `App.tsx`
+  enruta por modo (`CapsuleShell`/`CloudShell`/`OfflineShell`, reglas de hooks OK, DOM de cloud intacto).
+  GOTCHA: motores nativos tras feature flag para no exigir cmake en el gate; pesos (whisper large-v3 ~3 GB,
+  LLM de Ollama) y motores (Ollama, Piper) los aporta/instala el usuario en máquina capaz (~8–16 GB RAM,
+  mejor GPU/Apple Silicon); README documenta requisitos. Fuera de alcance (roadmap): function-calling en el
+  loop offline, streaming token-a-token, y la compilación/ejecución real (necesita modelos+motores+toolchain).

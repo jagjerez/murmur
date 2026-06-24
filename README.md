@@ -44,6 +44,8 @@ murmur memory list                 # lista la memoria guardada
 murmur memory add <texto>          # añade una memoria explícita
 murmur memory export [ruta]        # exporta memoria + sesiones + mensajes (JSON)
 murmur plugins list                # lista los plugins (skills) integrados
+murmur config set-mode <cloud|offline>   # elige modo nube (default) o local
+murmur models download whisper-large-v3  # descarga el modelo de STT local (~3 GB)
 ```
 
 Usa `murmur help` para la lista completa de comandos.
@@ -53,6 +55,27 @@ Usa `murmur help` para la lista completa de comandos.
 - Node ≥ 24 (recomendado: la versión de `.nvmrc`). Imprescindible: `node:sqlite` (módulo built-in sin flag desde Node 24) y pnpm 11 exige Node ≥ 22.13.
 - pnpm 11+
 - Rust (solo para la app de escritorio Tauri y el crate nativo)
+
+## Modo offline (sin nube) — opcional
+
+Por defecto murmur usa la nube (OpenAI Realtime): casi sin requisitos locales, solo red + API key.
+Opcionalmente puede conversar **100% en local** por turnos (STT→LLM→TTS), para privacidad/offline:
+
+- **STT:** whisper.cpp vía `whisper-rs` (comando Tauri, tras la feature `offline` del bundle). Modelo
+  `ggml-large-v3.bin` auto-descargado a `~/.murmur/models/` con `murmur models download whisper-large-v3`.
+- **LLM:** [Ollama](https://ollama.com) corriendo en `localhost:11434` (instálalo y baja un modelo, p. ej. `ollama pull llama3`).
+- **TTS:** [Piper](https://github.com/rhasspy/piper) en el `PATH` + una voz (`voice.onnx`) en `~/.murmur/models/`.
+
+Activación: `murmur config set-mode offline`. Multilingüe (incluido alemán) según el modelo whisper/LLM.
+
+**Requisitos del modo offline** (la nube sigue siendo el default para máquinas modestas):
+
+- ~3 GB de disco para whisper large-v3 (+ el tamaño del modelo de Ollama).
+- ~8–16 GB de RAM; va notablemente mejor con GPU o Apple Silicon.
+- El bundle de escritorio debe compilarse con la feature `offline` (`tauri build --features offline`),
+  que necesita cmake/clang para compilar whisper.cpp.
+
+Los modelos y motores (whisper, Ollama, Piper) **los aporta el usuario**; murmur no empaqueta pesos.
 
 ## Estructura (monorepo pnpm)
 

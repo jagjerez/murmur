@@ -11,8 +11,9 @@ import {
   createPiperTtsProvider,
 } from '@murmur/core';
 import { invoke } from '@tauri-apps/api/core';
-import type { ChatProvider } from '@murmur/rag';
-import { createOllamaChatProvider } from '@murmur/rag';
+// Subruta `@murmur/rag/chat` (no el barrel): evita arrastrar el SQLite (`node:sqlite`/`node:crypto`)
+// de `@murmur/rag` al bundle del webview, que rompería el `vite build`.
+import { createOllamaChatProvider, type ChatProvider } from '@murmur/rag/chat';
 import type { AudioDeviceManager, VoiceInputProvider, VoiceOutputProvider } from '@murmur/audio';
 import { Capsule } from './components/Capsule';
 import { Onboarding, type RequestMic } from './components/Onboarding';
